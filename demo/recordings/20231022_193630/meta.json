@@ -1,0 +1,42 @@
+{
+    "realsense": {
+        "serials": [
+            "037522251142",
+            "043422252387",
+            "046122250168",
+            "105322251225",
+            "105322251564",
+            "108222250342",
+            "115422250549",
+            "117222250549"
+        ],
+        "width": 640,
+        "height": 480
+    },
+    "hololens": {
+        "serials": [
+            "hololens_kv5h72"
+        ],
+        "depth_mode": "LONGTHROW",
+        "pv_width": 1280,
+        "pv_height": 720,
+        "depth_width": 320,
+        "depth_height": 288
+    },
+    "calibration": {
+        "extrinsics": "extrinsics_20231014",
+        "mano": "subject_7"
+    },
+    "object_ids": [
+        "G02_1",
+        "G02_2",
+        "G02_3",
+        "G02_4"
+    ],
+    "mano_sides": [
+        "right",
+        "left"
+    ],
+    "num_frames": 790,
+    "task_id": 2
+}
