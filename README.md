@@ -68,7 +68,7 @@ conda activate summer_camp
 2. Clone the Repository
 
 ```bash
-git clone --recursive https://github.com/gobanana520/CAST-STEM-2024.git
+git clone --recursive https://github.com/JWRoboticsVision/CAST-STEM-2025.git
 cd CAST-STEM-2024
 ```
 
