@@ -34,3 +34,6 @@ build.log
 
 # Slides
 *.ppt[x]
+
+# Checkpoints
+/checkpoints
