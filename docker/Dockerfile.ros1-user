@@ -1,0 +1,49 @@
+
+FROM irvlutd/ubuntu20.04-ros-noetic-base
+LABEL version="1.0"
+LABEL description="Ubuntu 20.04 + CUDA 11.8 + OpenGL + Vulkan SDK + ROS Noetic + Miniconda3 + Non-root User"
+
+ARG USER_NAME_ARG="my_user"
+ARG USER_UID_ARG=1000
+ARG USER_GID_ARG=1000
+
+# --------------------- Change to root user & bash shell ---------------------
+USER root
+SHELL ["/bin/bash", "-c"]
+
+# --------------------- Create non-root sudo User ---------------------
+RUN addgroup --gid ${USER_GID_ARG} ${USER_NAME_ARG} && \
+    adduser --disabled-password --home /home/${USER_NAME_ARG} --shell "/bin/zsh" --gecos "" --uid ${USER_UID_ARG} --gid ${USER_GID_ARG} ${USER_NAME_ARG} && \
+    usermod -aG sudo ${USER_NAME_ARG} && \
+    echo "${USER_NAME_ARG} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers && \
+    # --------------------- Set Permissions for Conda Directory ---------------------
+    chown -R ${USER_NAME_ARG}:${USER_GID_ARG} /opt/conda && \
+    chmod -R g=u /opt/conda
+
+# --------------------- Switch to Non-root User ---------------------
+USER ${USER_NAME_ARG}
+ENV HOME=/home/${USER_NAME_ARG}
+WORKDIR ${HOME}
+SHELL ["/bin/zsh", "-c"]
+
+# --------------------- Shell & Environment Setup ---------------------
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
+    sed -i 's/robbyrussell/candy/g' ${HOME}/.zshrc && \
+    zstyle ':omz:update' mode disabled && \
+    echo "export PATH=/opt/conda/bin:\$PATH" >> ${HOME}/.zshrc && \
+    /opt/conda/bin/conda init zsh && \
+    /opt/conda/bin/conda config --set auto_activate_base false && \
+    /opt/conda/bin/conda config --add channels conda-forge && \
+    /opt/conda/bin/conda config --set ssl_verify no && \
+    /opt/conda/bin/conda config --set show_channel_urls True && \
+    /opt/conda/bin/conda config --set channel_priority strict && \
+    echo "source /opt/ros/noetic/setup.zsh" >> ${HOME}/.zshrc && \
+    echo "source {HOME}/catkin_ws/src/devel/setup.zsh" >> ${HOME}/.zshrc && \
+    echo "conda activate ${HOME}/code/.env" >> ${HOME}/.zshrc
+
+# --------------------- Create bindings ----------------------
+RUN mkdir -p ${HOME}/catkin_ws && \
+    mkdir -p ${HOME}/code
+
+# --------------------- Create Code Directory ---------------------
+WORKDIR ${HOME}/code

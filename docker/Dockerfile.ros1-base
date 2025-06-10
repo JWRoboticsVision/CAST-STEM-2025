@@ -1,0 +1,92 @@
+# --------------------- Base Configuration ---------------------
+ARG BASE_DIST_ARG=ubuntu20.04
+ARG CUDA_VERSION_ARG=11.8.0
+
+# https://catalog.ngc.nvidia.com/orgs/nvidia/containers/isaac-sim
+# https://gitlab.com/nvidia/container-images/opengl
+# https://gitlab.com/nvidia/cuda
+FROM nvidia/cuda:${CUDA_VERSION_ARG}-devel-${BASE_DIST_ARG}
+
+LABEL version="1.0"
+LABEL description="Ubuntu 20.04 + CUDA 11.8 + OpenGL + Vulkan SDK + ROS Noetic + Miniconda3"
+
+
+# --------------------- Change to root user & bash shell ---------------------
+USER root
+SHELL ["/bin/bash", "-c"]
+
+# --------------------- Environment Variables ---------------------
+ARG TORCH_CUDA_ARCH_LIST_ARG="7.5 8.0 8.6+PTX"
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=all \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_ARG} \
+    CUDA_HOME=/usr/local/cuda \
+    LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64 \
+    DEBIAN_FRONTEND=noninteractive \
+    PATH="/opt/conda/bin:$PATH"
+
+# --------------------- Base Packages and Graphics Support ---------------------
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update --fix-missing && apt-get install -qq -y --no-install-recommends \
+    build-essential gcc g++ cmake make pkg-config \
+    software-properties-common ca-certificates curl wget git zsh tmux unzip sudo gnupg2 \
+    # OpenGL + dependencies
+    libx11-dev libxext-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+    libglu1-mesa-dev libgles2-mesa-dev libgl1-mesa-glx libgl1-mesa-dev \
+    libglib2.0-0 ncurses-term libatomic1 \
+    freeglut3 freeglut3-dev libglfw3 libglfw3-dev libglew-dev libglm-dev \
+    libfreeimage-dev libosmesa6-dev libfontconfig1 libfreetype-dev \
+    # Nvidia glvnd
+    libsm6 libxdmcp6 libxcb1 libxext6 libx11-6 libgomp1 libxau6  \
+    libglvnd0 libgl1 libglx0 libegl1 libgles2 libglvnd-dev libegl1-mesa-dev && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------- Vulkan SDK (LunarG Repo) ---------------------
+# https://vulkan.lunarg.com/
+# Vulkan https://vulkan-tutorial.com/Development_environment#page_Linux
+RUN wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | tee /etc/apt/trusted.gpg.d/lunarg.asc && \
+    wget -qO /etc/apt/sources.list.d/lunarg-vulkan-jammy.list https://packages.lunarg.com/vulkan/lunarg-vulkan-jammy.list && \
+    apt-get update && apt-get install -qq -y --no-install-recommends \
+    vulkan-sdk vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools libvulkan1 && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------- Copy Vulkan & Nvidia ICDs ---------------------
+COPY ./config/nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
+COPY ./config/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
+# --------------------- Install ROS1 Noetic ---------------------
+# https://wiki.ros.org/noetic/Installation/Ubuntu
+ARG ROS1_APT_PACKAGES_ARG="ros-noetic-desktop"
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
+    curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | sudo apt-key add - && \
+    apt-get update && apt-get install -qq -y --no-install-recommends ${ROS1_APT_PACKAGES_ARG} && \
+    source /opt/ros/noetic/setup.bash && \
+    apt-get update && apt-get install -qq -y --no-install-recommends \
+    python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool \
+    ros-noetic-ddynamic-reconfigure ros-noetic-image-geometry ros-noetic-camera-info-manager ros-noetic-rgbd-launch ros-noetic-robot-controllers && \
+    # Bootstrap Rosdep
+    rosdep init && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------- Install Miniconda3 ---------------------
+RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh && \
+    bash miniconda.sh -b -p /opt/conda && rm miniconda.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete
+
+ENV PATH="/opt/conda/bin:$PATH"
+
+# --------------------- Default CMD ---------------------
+CMD [ "bash" ]
