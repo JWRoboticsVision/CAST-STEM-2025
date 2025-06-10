@@ -19,6 +19,14 @@ USER_NAME="my_user"
 USER_ID=$(id -u)
 GROUP_ID=$(id -g)
 
+# Timezone
+ZONE_PATH=$(readlink -f /etc/localtime)
+if [[ "$ZONE_PATH" == /usr/share/zoneinfo/* ]]; then
+    TZ=$(realpath --relative-to=/usr/share/zoneinfo "$ZONE_PATH")
+else
+    TZ="Etc/UTC"
+fi
+
 # ROS1
 ROS1_APT_PACKAGE="ros-noetic-desktop"
 

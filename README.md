@@ -13,6 +13,10 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [2. Conda Environment Manager](#2-conda-environment-manager)
       - [3. Code Editor (Visual Studio Code for example)](#3-code-editor-visual-studio-code-for-example)
   - [Environment Setup](#environment-setup)
+  - [Environment Setup (Docker)](#environment-setup-docker)
+      - [1. Install Docker and Docker Compose](#1-install-docker-and-docker-compose)
+      - [2. Build the Docker Image](#2-build-the-docker-image)
+      - [3. Run the Docker Container](#3-run-the-docker-container)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
@@ -78,9 +82,58 @@ cd CAST-STEM-2024
 python -m pip install --no-cache-dir -r requirements.txt
 ```
 
-1. ROS Environment Setup [Optional]
+4. ROS Environment Setup [Optional]
 
 If you plan to run the ROS locally, refer to the [ROS Environment Setup](./docs/ROS_Environment_Setup.md) document for detailed steps. You can then run `roscore` to start the ROS master and debug your code under the ROS environment.
+
+## Environment Setup (Docker)
+
+If you prefer to use Docker, you can set up the environment using the provided Dockerfile. This allows you to run the project in a containerized environment.
+
+#### 1. Install Docker and Docker Compose
+
+**TBD**
+
+#### 2. Build the Docker Image
+
+**TBD**
+
+#### 3. Run the Docker Container
+
+- Compile the ros workspace
+
+```bash
+cd ~/catkin_ws/src
+# Clone the fetch_ros
+git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
+# Clone the fetch_gazebo
+git clone -b gazebo11 https://github.com/ZebraDevs/fetch_gazebo.git
+# Clone the urdf_tutorial
+git clone -b ros1 https://github.com/ros/urdf_tutorial.git
+# Compile the workspace
+cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
+```
+
+- Setup the Conda Environment
+
+```bash
+# Go to the code directory
+cd ~/code
+# Create and activate the conda environment
+conda create --prefix $PWD/.env python=3.11 -y
+conda activate $PWD/.env
+```
+
+- Install the PyTorch 2.1.1
+
+```bash
+python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+```
+
+- Install the dependencies
+```bash
+python -m pip install --no-cache-dir -r requirements.txt
+```
 
 ## Project Schedule
 

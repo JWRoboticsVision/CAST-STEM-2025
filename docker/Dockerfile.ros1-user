@@ -30,7 +30,7 @@ SHELL ["/bin/zsh", "-c"]
 RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     sed -i 's/robbyrussell/candy/g' ${HOME}/.zshrc && \
     zstyle ':omz:update' mode disabled && \
-    echo "export PATH=/opt/conda/bin:\$PATH" >> ${HOME}/.zshrc && \
+    # echo "export PATH=/opt/conda/bin:\$PATH" >> ${HOME}/.zshrc && \
     /opt/conda/bin/conda init zsh && \
     /opt/conda/bin/conda config --set auto_activate_base false && \
     /opt/conda/bin/conda config --add channels conda-forge && \
@@ -38,7 +38,7 @@ RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh
     /opt/conda/bin/conda config --set show_channel_urls True && \
     /opt/conda/bin/conda config --set channel_priority strict && \
     echo "source /opt/ros/noetic/setup.zsh" >> ${HOME}/.zshrc && \
-    echo "source {HOME}/catkin_ws/src/devel/setup.zsh" >> ${HOME}/.zshrc && \
+    echo "source ~/catkin_ws/devel/setup.zsh" >> ${HOME}/.zshrc && \
     echo "conda activate ${HOME}/code/.env" >> ${HOME}/.zshrc
 
 # --------------------- Create bindings ----------------------

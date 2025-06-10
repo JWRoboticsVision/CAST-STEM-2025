@@ -17,14 +17,14 @@ cat <<EOF >${DOCKER_DIR}/docker-compose.yaml
 # Reusable extensions
 x-default-base-volumes: &default-base-volumes
   - type: bind
-    source: /tmp
-    target: /tmp
+    source: /tmp/.X11-unix
+    target: /tmp/.X11-unix
   - type: bind
-    source: /etc/localtime
-    target: /etc/localtime
-    read_only: true
+    source: ${PROJ_ROOT}/docker/ros/.ros
+    target: /home/${USER_NAME}/.ros
 
 x-default-user-volumes: &default-user-volumes
+  - <<: *default-base-volumes
   # Project root folder
   - type: bind
     source: ${PROJ_ROOT}
@@ -42,6 +42,7 @@ x-default-base-environment: &default-base-environment
   DISPLAY: ${DISPLAY}
   TERM: ${TERM}
   QT_X11_NO_MITSHM: 1
+  TZ: ${TZ}
 
 x-default-base-deploy: &default-base-deploy
   resources:
@@ -54,7 +55,7 @@ x-default-base-deploy: &default-base-deploy
 services:
   ros1-base:
     profiles:
-      - ros1
+      - ros1-base
     container_name: ubuntu20.04-ros-noetic-base
     image: irvlutd/ubuntu20.04-ros-noetic-base:latest
     build:
@@ -85,16 +86,14 @@ services:
     container_name: ubuntu20.04-ros-noetic-${USER_ID}
     image: irvlutd/ubuntu20.04-ros-noetic:${USER_ID}
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.ros1-user
+      context: .
+      dockerfile: Dockerfile.ros1-user
       args:
         - USER_NAME_ARG=${USER_NAME}
         - USER_UID_ARG=${USER_ID}
         - USER_GID_ARG=${GROUP_ID}
     environment: *default-base-environment
-    volumes:
-      - <<: *default-base-volumes
-      - <<: *default-user-volumes
+    volumes: *default-user-volumes
     deploy: *default-base-deploy
     network_mode: host
     privileged: true

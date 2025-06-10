@@ -75,7 +75,9 @@ run_container() {
   docker compose \
     --env-file ${DOCKER_DIR}/.env \
     --file ${DOCKER_DIR}/docker-compose.yaml \
-    --profile ${PROFILE_NAME} up --no-recreate -d
+    --profile ${PROFILE_NAME} up -d
+    # --force-recreate
+    # --no-recreate
 }
 
 # ---- Enter ----
@@ -89,6 +91,21 @@ enter_container() {
 
   log_message "Entering container $CONTAINER_NAME..."
   docker exec -it $CONTAINER_NAME zsh --login
+}
+
+# ---- Stop ----
+stop_container() {
+  local status
+  status=$(get_container_status)
+  if [ "$status" == "running" ]; then
+    log_message "Stopping container $CONTAINER_NAME..."
+    docker compose \
+      --env-file ${DOCKER_DIR}/.env \
+      --file ${DOCKER_DIR}/docker-compose.yaml \
+      --profile ${PROFILE_NAME} down
+  else
+    log_message "Container $CONTAINER_NAME is not running."
+  fi
 }
 
 # ---- Dispatcher ----

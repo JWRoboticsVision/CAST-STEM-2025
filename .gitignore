@@ -37,3 +37,6 @@ build.log
 
 # Checkpoints
 /checkpoints
+
+# Others
+demo/
