@@ -143,8 +143,10 @@ bash docker/container_handler.sh enter ros1-user
 ```bash
 # Make sure you are not in the conda environment
 conda deactivate
+# Update rosdeps
+rosdep update
 # Go to the catkin workspace
-mkdir ~/catkin_ws/src && cd ~/catkin_ws/src
+mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/src
 # Clone the fetch_ros
 git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
 # Clone the fetch_gazebo
@@ -181,13 +183,9 @@ cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
   ```
 
 - Install FoundationPose:
-
 ```bash
 # Install FoundationPose
 bash scripts/install_foundationpose.sh
-
-# Download checkpoint
-bash scripts/download_models.sh --foundationpose
 ```
 
 - Download SAM2 models:
