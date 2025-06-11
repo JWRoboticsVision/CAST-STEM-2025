@@ -1,27 +1,48 @@
 # CAST-STEM 2025 Summer Camp Project
 
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg)](https://www.python.org/downloads/release/python-3110)
+[![ROS](https://img.shields.io/badge/ROS-Melodic-22314E.svg)](http://wiki.ros.org/melodic)
+[![Pytorch](https://img.shields.io/badge/Pytorch-2.1.1-EE4C2C.svg)](https://pytorch.org/)
+[![Linux](https://img.shields.io/badge/OS-Ubuntu_20.04-FF9800.svg)](https://ubuntu.com/)
+
+<!-- ![License](https://img.shields.io/badge/License-GPLv3-4E9A06.svg) -->
+<!-- [![Website](https://img.shields.io/badge/Website-Visit-lightgrey.svg)](TBD) -->
+
 This is the repository for the CAST-STEM 2025 Summer Camp project. The project aims to study perception-driven robotic grasping, where a robot first needs to recognize objects and then plans its motion for grasping.
 
 ---
 
+## News
+
+- **2025-06-11**:
+  - added the FoundationPose installation script.
+- **2025-06-10**:
+  - added the Docker environment setup.
+
 ## Contents
 
 - [CAST-STEM 2025 Summer Camp Project](#cast-stem-2025-summer-camp-project)
+  - [News](#news)
   - [Contents](#contents)
   - [Prerequisites](#prerequisites)
       - [1. Git](#1-git)
       - [2. Conda Environment Manager](#2-conda-environment-manager)
       - [3. Code Editor (Visual Studio Code for example)](#3-code-editor-visual-studio-code-for-example)
   - [Environment Setup](#environment-setup)
-  - [Environment Setup (Docker)](#environment-setup-docker)
-      - [1. Install Docker and Docker Compose](#1-install-docker-and-docker-compose)
-      - [2. Build the Docker Image](#2-build-the-docker-image)
-      - [3. Run the Docker Container](#3-run-the-docker-container)
+    - [Clone the Repository](#clone-the-repository)
+    - [Environment Setup (Local)](#environment-setup-local)
+    - [Environment Setup (Docker)](#environment-setup-docker)
+      - [1. Build the Docker Image](#1-build-the-docker-image)
+      - [2. Run the Docker Container](#2-run-the-docker-container)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
       - [2. Further Readings](#2-further-readings)
       - [3. Useful Resources](#3-useful-resources)
+    - [Week 2: Hands-on Practice for ROS, 6D Pose Estimation, and Fetch Gazebo](#week-2-hands-on-practice-for-ros-6d-pose-estimation-and-fetch-gazebo)
+      - [1. Slides](#1-slides-1)
+      - [2. Practice](#2-practice)
+      - [2. Useful Resources](#2-useful-resources)
 
 ## Prerequisites
 
@@ -62,48 +83,68 @@ Please refer to the official instruction [Installing Miniconda](https://docs.ana
 
 ## Environment Setup
 
-1. Create the Conda Environment
+### Clone the Repository
 
 ```bash
-conda create --name summer_camp python=3.11
-conda activate summer_camp
+# Clone the repository
+git clone https://github.com/JWRoboticsVision/CAST-STEM-2025.git
+
+# Go to the project directory
+cd CAST-STEM-2025
 ```
 
-2. Clone the Repository
+### Environment Setup (Local)
+
+- Create the Conda Environment
 
 ```bash
-git clone --recursive https://github.com/JWRoboticsVision/CAST-STEM-2025.git
-cd CAST-STEM-2024
+conda create --prefix $PWD/.env python=3.11 -y
+conda activate $PWD/.env
 ```
 
-3. Install Dependencies
+- Install the PyTorch 2.1.1
+
+```bash
+python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+```
+
+- Install the dependencies
 
 ```bash
 python -m pip install --no-cache-dir -r requirements.txt
 ```
 
-4. ROS Environment Setup [Optional]
+- ~~ROS Environment Setup in Conda [Optional]~~
 
-If you plan to run the ROS locally, refer to the [ROS Environment Setup](./docs/ROS_Environment_Setup.md) document for detailed steps. You can then run `roscore` to start the ROS master and debug your code under the ROS environment.
+~~If you plan to run the ROS locally, refer to the [ROS Environment Setup](./docs/ROS_Environment_Setup.md) document for detailed steps. You can then run `roscore` to start the ROS master and debug your code under the ROS environment.~~
 
-## Environment Setup (Docker)
+### Environment Setup (Docker)
 
 If you prefer to use Docker, you can set up the environment using the provided Dockerfile. This allows you to run the project in a containerized environment.
 
-#### 1. Install Docker and Docker Compose
+#### 1. Build the Docker Image
 
-**TBD**
+Follow the instructions in the [container_installation.md](./docker/container_installation.md) to build the Docker image.
 
-#### 2. Build the Docker Image
+#### 2. Run the Docker Container
 
-**TBD**
-
-#### 3. Run the Docker Container
-
-- Compile the ros workspace
+- Run and enter the container:
 
 ```bash
-cd ~/catkin_ws/src
+# Run the ros1-base container
+bash docker/container_handler.sh run ros1-user
+
+# Enter the container
+bash docker/container_handler.sh enter ros1-user
+```
+
+- Compile the ros workspace (if you have not done so)
+
+```bash
+# Make sure you are not in the conda environment
+conda deactivate
+# Go to the catkin workspace
+mkdir ~/catkin_ws/src && cd ~/catkin_ws/src
 # Clone the fetch_ros
 git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
 # Clone the fetch_gazebo
@@ -116,23 +157,43 @@ cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
 
 - Setup the Conda Environment
 
+  - Create the conda environment in the code directory:
+    The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
+
+  ```bash
+  # Go to the code directory
+  cd ~/code
+  # Create and activate the conda environment
+  conda create --prefix $PWD/.env python=3.11 -y
+  conda activate $PWD/.env
+  ```
+
+  - Install the PyTorch 2.1.1
+
+  ```bash
+  python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+  ```
+
+  - Install the dependencies
+
+  ```bash
+  python -m pip install --no-cache-dir -r requirements.txt
+  ```
+
+- Install FoundationPose:
+
 ```bash
-# Go to the code directory
-cd ~/code
-# Create and activate the conda environment
-conda create --prefix $PWD/.env python=3.11 -y
-conda activate $PWD/.env
+# Install FoundationPose
+bash scripts/install_foundationpose.sh
+
+# Download checkpoint
+bash scripts/download_models.sh --foundationpose
 ```
 
-- Install the PyTorch 2.1.1
+- Download SAM2 models:
 
 ```bash
-python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
-```
-
-- Install the dependencies
-```bash
-python -m pip install --no-cache-dir -r requirements.txt
+wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt -O ./checkpoints/sam2.1_t.pt
 ```
 
 ## Project Schedule
@@ -168,3 +229,33 @@ python -m pip install --no-cache-dir -r requirements.txt
 - Python basics https://pythonbasics.org/
 - Numpy https://numpy.org/doc/stable/user/basics.html
 - OpenCV https://docs.opencv.org/4.x/d6/d00/tutorial_py_root.html
+
+### Week 2: Hands-on Practice for ROS, 6D Pose Estimation, and Fetch Gazebo
+
+#### 1. Slides
+
+- [06_ROS_Publish_Image.ipynb](./notebooks/06_ROS_Publish_Image.ipynb)
+  Introduce how to publish images in ROS.
+- [07_ROS_Subscribe_Image.ipynb](./notebooks/07_ROS_Subscribe_Image.ipynb)
+  Introduce how to subscribe images in ROS.
+
+#### 2. Practice
+
+- Write a ROS node to publish images from the recordings.
+- Write a ROS node to subscribe images and display them in a window.
+- Write a ROS node to subscribe images published by the Fetch Gazebo simulation.
+- Modify the FoundationPose code to:
+  - detect object poses using the images published by the Fetch Gazebo simulation.
+  - publish the detected poses to a ROS topic.
+  - draw the detected poses on the images and publish the images to a ROS topic.
+
+#### 2. Useful Resources
+
+- [ROS Tutorials](http://wiki.ros.org/ROS/Tutorials)
+- [ROS Python API](http://wiki.ros.org/rospy)
+- ROS Messages
+  - [ROS Image Message](https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/Image.html)
+  - [ROS Pose Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/Pose.html)
+  - [ROS Pose Array Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseArray.html)
+  - [ROS TF2](http://wiki.ros.org/tf2)
+- [MoveIt 1 Tutorials](https://moveit.github.io/moveit_tutorials/) for ROS Noetic

@@ -20,6 +20,9 @@ matplotlib>=3.9.0
 scikit-learn>=1.5.0
 scikit-image>=0.23.0
 tqdm>=4.66.0
+h5py
+ruamel.yaml
+pyyaml
 
 # CV Libraries
 imageio>=2.34.0
@@ -28,6 +31,7 @@ opencv-python>=4.9.0
 opencv-contrib-python>=4.9.0
 plotly>=5.19.0
 open3d>=0.18.0
+supervision>=0.25.1
 
 # Trimesh
 trimesh[recommend]>=4.4.0

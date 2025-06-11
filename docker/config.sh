@@ -1,7 +1,19 @@
 #!/bin/bash
+# author: Jikai Wang
+# email: jikai.wang AT utdallas DOT edu
 
-DOCKER_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
-PROJ_ROOT=$(dirname "$DOCKER_DIR")
+CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJ_ROOT=$(realpath "${CURR_DIR}/..")
+DOCKER_DIR=${PROJ_ROOT}/docker
+
+#####################
+# Environment Variables
+#####################
+
+# Set the backend for Matplotlib
+export MPLBACKEND=agg
+# Set maximum number of jobs for the ninja build system
+export MAX_JOBS=$(nproc)
 
 #####################
 # DOCKER BUILD ARGS
