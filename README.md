@@ -300,6 +300,15 @@ cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
 source ~/catkin_ws/devel/setup.zsh
 ```
 
+- Link the models of my_demo to the Gazebo model path:
+
+```bash
+# Go to the Gazebo model path
+cd ~/.gazebo
+# Link the my_demo models
+ln -s ~/catkin_ws/src/my_demo/models models
+```
+
 - **Terminal 1:** Start the ROS master
 
 ```bash
