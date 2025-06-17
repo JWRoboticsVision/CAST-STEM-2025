@@ -43,6 +43,9 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [1. Slides](#1-slides-1)
       - [2. Practice](#2-practice)
       - [2. Useful Resources](#2-useful-resources)
+  - [Week 3: Fetch Gazebo Simulation](#week-3-fetch-gazebo-simulation)
+    - [1. Fetch Grasping Demo](#1-fetch-grasping-demo)
+    - [2. SceneReplica Reimplementation](#2-scenereplica-reimplementation)
 
 ## Prerequisites
 
@@ -144,17 +147,20 @@ bash docker/container_handler.sh enter ros1-user
 # Make sure you are not in the conda environment
 conda deactivate
 # Update rosdeps
-rosdep update
+rosdep update --rosdistro=$ROS_DISTRO
 # Go to the catkin workspace
 mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/src
-# Clone the fetch_ros
+# Fetch Robot ROS package
 git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
-# Clone the fetch_gazebo
+# Fetch Gazebo Simulator
 git clone -b gazebo11 https://github.com/ZebraDevs/fetch_gazebo.git
 # Clone the urdf_tutorial
 git clone -b ros1 https://github.com/ros/urdf_tutorial.git
 # Compile the workspace
 cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
+# Verify the workspace
+source devel/setup.zsh
+roslaunch urdf_tutorial display.launch  model:=src/fetch_ros/fetch_description/robots/fetch.urdf
 ```
 
 - Setup the Conda Environment
@@ -166,7 +172,7 @@ cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
   # Go to the code directory
   cd ~/code
   # Create and activate the conda environment
-  conda create --prefix $PWD/.env python=3.11 -y
+  conda create --prefix $PWD/.env python=3.11 libffi=3.4 -y
   conda activate $PWD/.env
   ```
 
@@ -182,7 +188,14 @@ cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
   python -m pip install --no-cache-dir -r requirements.txt
   ```
 
+  - Install the fetch_grasp package
+
+  ```bash
+  python -m pip install source/fetch_grasp
+  ```
+
 - Install FoundationPose:
+
 ```bash
 # Install FoundationPose
 bash scripts/install_foundationpose.sh
@@ -257,3 +270,154 @@ wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt 
   - [ROS Pose Array Message](https://docs.ros.org/en/noetic/api/geometry_msgs/html/msg/PoseArray.html)
   - [ROS TF2](http://wiki.ros.org/tf2)
 - [MoveIt 1 Tutorials](https://moveit.github.io/moveit_tutorials/) for ROS Noetic
+
+## Week 3: Fetch Gazebo Simulation
+
+In this week, we will focus on the Fetch Gazebo simulation. The goal is to use the Fetch robot in the Gazebo simulation environment to perform grasping tasks.
+
+### 1. Fetch Grasping Demo
+
+- Run Docker container:
+
+```bash
+bash ./docker/container_handler.sh run ros1-user
+```
+
+- Enter the container:
+
+```bash
+bash ./docker/container_handler.sh enter ros1-user
+```
+
+- **Terminal 1:** Start the ROS master
+
+```bash
+roscore
+```
+
+![fetch_demo_roscore](./docs/resources/fetch_demo_roscore.png)
+
+- **Terminal 2:** Start the Fetch Gazebo simulation
+
+```bash
+roslaunch my_demo table_ycb.launch
+```
+
+![fetch_demo_moveit_gazebo](./docs/resources/fetch_demo_moveit_gazebo.png)
+
+- **Terminal 3:** Launch the MoveIt Planning Interface
+
+```bash
+roslaunch fetch_moveit_config move_group.launch
+```
+
+![fetch_demo_moveit_planning](./docs/resources/fetch_demo_moveit_planning.png)
+
+- **Terminal 4:** Start Rviz
+
+```bash
+rviz -d config/rviz/fetch_gazebo.rviz
+```
+
+![fetch_demo_moveit_rviz](./docs/resources/fetch_demo_moveit_rviz.png)
+
+- **Terminal 5:** Run the Grasping
+
+```bash
+cd ~/catkin_ws/src/my_demo/scripts && python grasp_cracker.py
+```
+
+![fetch_demo_moveit_grasping](./docs/resources/fetch_demo_moveit_grasping.png)
+
+### 2. SceneReplica Reimplementation
+
+In this section, we will reimplement the [SceneReplica](https://github.com/IRVLUTD/SceneReplica) benchmarking using the Fetch robot in the Gazebo simulation environment.
+
+1. Download the modified SceneReplica from [box]().
+2. Unzip the downloaded file and place it in the `third-party` directory.
+3. Data Setup:
+   Follow the instructions in the [SceneReplica Data Setup](https://github.com/IRVLUTD/SceneReplica/tree/main#data-setup) to set up the data for SceneReplica.
+
+```
+Datasets
+   |--benchmarking
+      |--models/
+      |--grasp_data
+         |--refined_grasps
+            |-- fetch_gripper-{object_name}.json
+         |--sgrasps.pk
+      |--final_scenes
+         |--scene_data/
+            |-- scene_id_*.pk scene pickle files
+         |--metadata/
+            |-- meta-00*.mat metadata .mat files
+            |-- color-00*.png color images for scene
+            |-- depth-00*.png depth images for scene
+         |--scene_ids.txt : selected scene ids on each line
+```
+
+4. Follow [Gazebo (Simulation) Usage](https://github.com/IRVLUTD/SceneReplica/tree/main#gazebo-simulation-usage) to run the SceneReplica benchmarking in the Gazebo simulation environment.
+   - Run and Enter the Docker container:
+
+```bash
+bash docker/container_handler.sh run ros1-user
+bash docker/container_handler.sh enter ros1-user
+```
+
+- Link the SceneReplica models to the Gazebo model path:
+
+```bash
+# Go to the Gazebo model path
+cd ~/.gazebo
+# Link the SceneReplica models
+ln -s ~/code/third-party/SceneReplica/benchmarking/models models
+```
+
+- **Terminal 1:** Start the ROS master
+
+```bash
+roscore
+```
+
+- **Terminal 2:** Start the Fetch Gazebo simulation with Just Robot
+
+```bash
+# Go to the SceneReplica directory
+cd ~/code/third-party/SceneReplica
+# Launch the Just Robot simulation
+roslaunch launch/just_robot.launch
+```
+
+- **Terminal 3:** Setup the desired scene in Gazebo
+  Available scene ids: 10, 25, 27, 33, 36, 38, 39, 48, 56, 65, 68, 77, 83, 84, 104, 122, 130, 141, 148, 161
+
+```bash
+# Go to the SceneReplica source directory
+cd ~/code/third-party/SceneReplica/src
+# Run the scene setup script
+python setup_scene_sim.py --data_dir ../Datasets/benchmarking
+# Select the scene id you want to setup
+# For example, to setup scene id 10
+```
+
+- **Terminal 4:** Start the MoveIt Planning Interface
+
+```bash
+# Go to the SceneReplica directory
+cd ~/code/third-party/SceneReplica
+# Launch the MoveIt Planning Interface
+roslaunch launch/moveit_sim.launch
+```
+
+- **Terminal 5:** Run the Model-based Grasping
+
+```bash
+# Go to the SceneReplica source directory
+cd ~/code/third-party/SceneReplica/src
+# Run the grasping script
+python bench_model_based_grasping.py \
+  --data_dir ../Datasets/benchmarking \
+  --pose_method gazebo \
+  --obj_order nearest_first \
+  --scene_idx 10
+```

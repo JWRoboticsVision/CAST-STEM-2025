@@ -1,0 +1,147 @@
+# --------------------- Base: CUDA + Ubuntu ---------------------
+ARG BASE_DIST_ARG=ubuntu20.04
+ARG CUDA_VERSION_ARG=11.8.0
+FROM nvidia/cuda:${CUDA_VERSION_ARG}-devel-${BASE_DIST_ARG}
+
+LABEL version="1.0"
+LABEL description="Unified ROS1 Dockerfile with CUDA, Vulkan, Conda, and dynamic user"
+
+# --------------------- Change to root user & bash shell ---------------------
+USER root
+SHELL ["/bin/bash", "-c"]
+
+# --------------------- Base ENV ---------------------
+ARG TORCH_CUDA_ARCH_LIST_ARG="7.5 8.0 8.6+PTX"
+
+ENV NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=all \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST_ARG} \
+    CUDA_HOME=/usr/local/cuda \
+    LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:/usr/lib/i386-linux-gnu${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}:/usr/local/nvidia/lib:/usr/local/nvidia/lib64 \
+    DEBIAN_FRONTEND=noninteractive
+
+# --------------------- System & Graphics Dependencies ---------------------
+RUN --mount=type=cache,target=/var/cache/apt \
+    apt-get update --fix-missing && apt-get install -qq -y --no-install-recommends \
+    build-essential gcc g++ cmake make pkg-config \
+    software-properties-common ca-certificates curl wget git zsh tmux unzip sudo gosu gnupg2 tzdata \
+    # OpenGL + dependencies
+    libx11-dev libxext-dev libxi-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+    libglu1-mesa-dev libgles2-mesa-dev libgl1-mesa-glx libgl1-mesa-dev \
+    libglib2.0-0 ncurses-term libatomic1 \
+    libglfw3 libglfw3-dev libglew-dev libglm-dev freeglut3 freeglut3-dev \
+    libfreeimage-dev libosmesa6-dev libfontconfig1 libfreetype-dev \
+    # Nvidia glvnd
+    libsm6 libxdmcp6 libxcb1 libxext6 libx11-6 libgomp1 libxau6  \
+    libglvnd0 libgl1 libglx0 libegl1 libgles2 libglvnd-dev libegl1-mesa-dev && \
+    # --------------------- Vulkan SDK (LunarG Repo) v1.3.283 ---------------------
+    # https://vulkan.lunarg.com/
+    # Vulkan https://vulkan-tutorial.com/Development_environment#page_Linux
+    wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | apt-key add - && \
+    wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.283-focal.list https://packages.lunarg.com/vulkan/1.3.283/lunarg-vulkan-1.3.283-focal.list && \
+    apt-get update && apt-get install -qq -y --no-install-recommends \
+    vulkan-sdk vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools libvulkan1 && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && \
+    rm -rf /var/lib/apt/lists/*
+
+# --------------------- Copy Vulkan & Nvidia ICDs ---------------------
+COPY ./config/nvidia_icd.json /usr/share/vulkan/icd.d/nvidia_icd.json
+COPY ./config/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
+# --------------------- ROS1 + MoveIt + Gazebo ---------------------
+# https://wiki.ros.org/noetic/Installation/Ubuntu
+ARG ROS1_APT_PACKAGES_ARG="ros-noetic-desktop-full"
+
+RUN --mount=type=cache,target=/var/cache/apt \
+    echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
+    curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
+    apt-get update && apt-get install -qq -y --no-install-recommends ${ROS1_APT_PACKAGES_ARG} && \
+    source /opt/ros/noetic/setup.bash && \
+    apt-get update && apt-get install -qq -y --no-install-recommends \
+    python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool &&\
+    # Bootstrap Rosdep
+    rosdep init && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && rm -rf /var/lib/apt/lists/*
+
+# Other ROS1 packages
+RUN --mount=type=cache,target=/var/cache/apt \
+    # # Gazebo11
+    # # reference: https://classic.gazebosim.org/tutorials?tut=install_ubuntu
+    # echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list && \
+    # wget https://packages.osrfoundation.org/gazebo.key -O - | apt-key add - && \
+    apt-get update && apt-get install -qq -y --no-install-recommends \
+    # gazebo11 libgazebo11-dev \
+    # Moveit1
+    # reference: https://moveit.ai/install/
+    ros-noetic-moveit ros-noetic-moveit-visual-tools \
+    # Other ROS1 packages
+    ros-noetic-ddynamic-reconfigure \
+    ros-noetic-image-geometry \
+    ros-noetic-camera-info-manager \
+    ros-noetic-rgbd-launch \
+    ros-noetic-robot-controllers \
+    ros-noetic-costmap-2d \
+    ros-noetic-trac-ik && \
+    # Clean up apt cache
+    apt-get -y autoremove && apt-get clean autoclean && rm -rf /var/lib/apt/lists/*
+
+# --------------------- Miniconda3 ---------------------
+ARG CONDA_VERSION_ARG="latest"
+
+RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION_ARG}-Linux-x86_64.sh -O miniconda.sh && \
+    bash miniconda.sh -b -p /opt/conda && rm miniconda.sh && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete
+
+# --------------------- Create Non-root User ---------------------
+ARG USER_NAME_ARG="my_user"
+ARG USER_UID_ARG=1000
+ARG USER_GID_ARG=1000
+
+RUN addgroup --gid ${USER_GID_ARG} ${USER_NAME_ARG} && \
+    adduser --disabled-password --home /home/${USER_NAME_ARG} \
+    --shell "/bin/zsh" --gecos "" \
+    --uid ${USER_UID_ARG} --gid ${USER_GID_ARG} ${USER_NAME_ARG} && \
+    usermod -aG sudo ${USER_NAME_ARG} && \
+    echo "${USER_NAME_ARG} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USER_NAME_ARG} && \
+    chmod 0440 /etc/sudoers.d/${USER_NAME_ARG}
+
+# --------------------- Configure ZSH & Conda ---------------------
+USER ${USER_NAME_ARG}
+ENV HOME=/home/${USER_NAME_ARG} \
+    ZSH_DISABLE_COMPFIX=true
+WORKDIR /home/${USER_NAME_ARG}
+SHELL ["/bin/zsh", "-c"]
+
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
+    sed -i 's/ZSH_THEME=".*"/ZSH_THEME="candy"/g' ~/.zshrc && \
+    zstyle ':omz:update' mode disabled && \
+    /opt/conda/bin/conda init zsh && source ${HOME}/.zshrc && \
+    conda config --set auto_activate_base false && \
+    conda config --add channels conda-forge && \
+    conda config --set channel_priority strict && \
+    echo "source /opt/ros/noetic/setup.zsh" >> ${HOME}/.zshrc && \
+    echo "source ~/catkin_ws/devel/setup.zsh" >> ${HOME}/.zshrc && \
+    echo "conda activate ~/code/.env" >> ${HOME}/.zshrc
+
+# Create Common Directories (for bind mounts)
+RUN mkdir -p ${HOME}/.oh-my-zsh \
+    mkdir -p ${HOME}/catkin_ws/src \
+    mkdir -p ${HOME}/.gazebo \
+    mkdir -p ${HOME}/.ros
+
+# --------------------- Back to root: Copy EntryPoint ---------------------
+USER root
+SHELL ["/bin/bash", "-c"]
+
+# Copy EntryPoint
+COPY ./config/my_entrypoint.sh /usr/local/bin/my_entrypoint.sh
+RUN chmod +x /usr/local/bin/my_entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/my_entrypoint.sh"]
+WORKDIR /home/${USER_NAME_ARG}/code

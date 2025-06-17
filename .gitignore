@@ -26,6 +26,9 @@ venv.bak/
 # Jupyter Notebook
 .ipynb_checkpoints
 
+# Compiled files
+*.egg-info
+
 # Others
 config/settings.json
 .*_history
@@ -41,3 +44,4 @@ build.log
 # Others
 demo/
 third-party/
+datasets/

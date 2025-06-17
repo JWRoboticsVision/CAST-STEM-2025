@@ -1,7 +1,11 @@
 #!/bin/bash
+# author: Jikai Wang
+# email: jikai.wang AT utdallas DOT edu
 
 # Load external configuration
 source $(dirname $0)/config.sh
+
+export COMPOSE_PROJECT_NAME=${PROJECT_NAME}
 
 # Check the .env file first
 if [ ! -f ${DOCKER_DIR}/.env ]; then
@@ -35,10 +39,18 @@ fi
 if [[ "$PROFILE_NAME" == "ros1-base" ]]; then
   CONTAINER_NAME="ubuntu20.04-ros-noetic-base"
   IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic-base:latest"
-else
-  CONTAINER_NAME="ubuntu20.04-ros-noetic-${USER_ID}"
-  IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:${USER_ID}"
+elif [[ "$PROFILE_NAME" == "ros1-user" ]]; then
+  # CONTAINER_NAME="ubuntu20.04-ros-noetic-${HOST_UID}"
+  # IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:${HOST_UID}"
+  # CONTAINER_NAME="ubuntu20.04-ros-noetic-user"
+  # IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic-user:latest"
+  CONTAINER_NAME="ubuntu20.04-ros-noetic"
+  IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:latest"
 fi
+
+###################
+# Functions
+###################
 
 # Dynamic container status
 get_container_status() {
@@ -76,8 +88,6 @@ run_container() {
     --env-file ${DOCKER_DIR}/.env \
     --file ${DOCKER_DIR}/docker-compose.yaml \
     --profile ${PROFILE_NAME} up -d
-    # --force-recreate
-    # --no-recreate
 }
 
 # ---- Enter ----
@@ -90,7 +100,7 @@ enter_container() {
   fi
 
   log_message "Entering container $CONTAINER_NAME..."
-  docker exec -it $CONTAINER_NAME zsh --login
+  docker exec --user my_user -it $CONTAINER_NAME zsh --login
 }
 
 # ---- Stop ----

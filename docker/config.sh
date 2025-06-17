@@ -2,22 +2,19 @@
 # author: Jikai Wang
 # email: jikai.wang AT utdallas DOT edu
 
-CURR_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJ_ROOT=$(realpath "${CURR_DIR}/..")
-DOCKER_DIR=${PROJ_ROOT}/docker
+###################
+# Source Config
+###################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/../config/config.sh"
 
 #####################
-# Environment Variables
+# DOCKER ARGS
 #####################
 
-# Set the backend for Matplotlib
-export MPLBACKEND=agg
-# Set maximum number of jobs for the ninja build system
-export MAX_JOBS=$(nproc)
-
-#####################
-# DOCKER BUILD ARGS
-#####################
+# Compose project name
+PROJECT_NAME="summer_camp-${HOST_UID}"
 
 # Base image and CUDA version
 BASE_DIST="ubuntu20.04"
@@ -28,41 +25,21 @@ TORCH_CUDA_ARCH_LIST="7.5 8.0 8.6 8.9+PTX"
 
 # User configuration
 USER_NAME="my_user"
-USER_ID=$(id -u)
-GROUP_ID=$(id -g)
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
+
+# ROS
+ROS1_APT_PACKAGE="ros-noetic-desktop-full"
+ROS2_APT_PACKAGE="ros-humble-desktop"
+
+# Miniconda version
+# reference: https://repo.anaconda.com/miniconda/
+MINICONDA_VERSION="latest"
 
 # Timezone
 ZONE_PATH=$(readlink -f /etc/localtime)
 if [[ "$ZONE_PATH" == /usr/share/zoneinfo/* ]]; then
-    TZ=$(realpath --relative-to=/usr/share/zoneinfo "$ZONE_PATH")
+  TZ=$(realpath --relative-to=/usr/share/zoneinfo "$ZONE_PATH")
 else
-    TZ="Etc/UTC"
+  TZ="Etc/UTC"
 fi
-
-# ROS1
-ROS1_APT_PACKAGE="ros-noetic-desktop"
-
-# ROS2
-ROS2_APT_PACKAGE="ros-humble-desktop"
-
-# ISAAC
-ISAAC_LAB_VERSION="2.1.0"
-ISAAC_SIM_VERSION="4.5.0"
-
-###################
-# Logging Functions
-###################
-
-# Log file path for logging messages (default to /dev/null)
-LOG_FILE="/dev/null"
-
-# Function to log messages with a timestamp
-log_message() {
-    echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-}
-
-# Function to handle errors and exit
-handle_error() {
-    echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - $1" | tee -a "$LOG_FILE"
-    exit 1
-}
