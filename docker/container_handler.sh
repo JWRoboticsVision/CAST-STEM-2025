@@ -40,11 +40,7 @@ if [[ "$PROFILE_NAME" == "ros1-base" ]]; then
   CONTAINER_NAME="ubuntu20.04-ros-noetic-base"
   IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic-base:latest"
 elif [[ "$PROFILE_NAME" == "ros1-user" ]]; then
-  # CONTAINER_NAME="ubuntu20.04-ros-noetic-${HOST_UID}"
-  # IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:${HOST_UID}"
-  # CONTAINER_NAME="ubuntu20.04-ros-noetic-user"
-  # IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic-user:latest"
-  CONTAINER_NAME="ubuntu20.04-ros-noetic"
+  CONTAINER_NAME="ubuntu20.04-ros-noetic-${HOST_UID}"
   IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:latest"
 fi
 

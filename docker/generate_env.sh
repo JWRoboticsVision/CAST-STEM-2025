@@ -80,7 +80,7 @@ services:
   ros1-user:
     profiles:
       - ros1-user
-    container_name: ubuntu20.04-ros-noetic
+    container_name: ubuntu20.04-ros-noetic-${HOST_UID}
     image: irvlutd/ubuntu20.04-ros-noetic:latest
     build:
       context: .
