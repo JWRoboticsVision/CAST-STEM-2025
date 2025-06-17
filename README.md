@@ -277,6 +277,8 @@ In this week, we will focus on the Fetch Gazebo simulation. The goal is to use t
 
 ### 1. Fetch Grasping Demo
 
+Download and unzip the `my_demo.zip` file from [box](https://utdallas.box.com/s/puvnx931jzwk4o2bqrv5fnqnojzu80ar) and place it under the `./docker/ros/catkin_ws` directory.
+
 - Run Docker container:
 
 ```bash
@@ -287,6 +289,15 @@ bash ./docker/container_handler.sh run ros1-user
 
 ```bash
 bash ./docker/container_handler.sh enter ros1-user
+```
+
+- **Compile** the ROS workspace:
+
+```bash
+# Go to the catkin workspace
+cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
+# Source the workspace
+source ~/catkin_ws/devel/setup.zsh
 ```
 
 - **Terminal 1:** Start the ROS master
@@ -333,7 +344,7 @@ cd ~/catkin_ws/src/my_demo/scripts && python grasp_cracker.py
 
 In this section, we will reimplement the [SceneReplica](https://github.com/IRVLUTD/SceneReplica) benchmarking using the Fetch robot in the Gazebo simulation environment.
 
-1. Download the modified SceneReplica from [box]().
+1. Download the modified SceneReplica from [box](https://utdallas.box.com/s/0ueu09jzm0j9i9uk6ppfwv28ad7rw1hn).
 2. Unzip the downloaded file and place it in the `third-party` directory.
 3. Data Setup:
    Follow the instructions in the [SceneReplica Data Setup](https://github.com/IRVLUTD/SceneReplica/tree/main#data-setup) to set up the data for SceneReplica.
@@ -357,7 +368,8 @@ Datasets
 ```
 
 4. Follow [Gazebo (Simulation) Usage](https://github.com/IRVLUTD/SceneReplica/tree/main#gazebo-simulation-usage) to run the SceneReplica benchmarking in the Gazebo simulation environment.
-   - Run and Enter the Docker container:
+
+- Run and Enter the Docker container:
 
 ```bash
 bash docker/container_handler.sh run ros1-user
