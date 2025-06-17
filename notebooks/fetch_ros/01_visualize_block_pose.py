@@ -1,16 +1,15 @@
 #!/usr/bin/env python
-
 import rospy
 import roslib
 import tf
 import numpy as np
 from transforms3d.quaternions import mat2quat, quat2mat
 
-roslib.load_manifest('gazebo_msgs')
+roslib.load_manifest("gazebo_msgs")
 from gazebo_msgs.srv import GetModelState
 
 
-def ros_quat(tf_quat): #wxyz -> xyzw
+def ros_quat(tf_quat):  # wxyz -> xyzw
     quat = np.zeros(4)
     quat[-1] = tf_quat[0]
     quat[:-1] = tf_quat[1:]
@@ -49,12 +48,12 @@ def ros_pose_to_rt(pose):
 
 
 # Query pose of frames from the Gazebo environment
-def get_pose_gazebo(model_name, relative_entity_name=''):
+def get_pose_gazebo(model_name, relative_entity_name=""):
 
     def gms_client(model_name, relative_entity_name):
-        rospy.wait_for_service('/gazebo/get_model_state')
+        rospy.wait_for_service("/gazebo/get_model_state")
         try:
-            gms = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+            gms = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
             resp1 = gms(model_name, relative_entity_name)
             return resp1
         except (rospy.ServiceException, e):
@@ -65,7 +64,7 @@ def get_pose_gazebo(model_name, relative_entity_name=''):
     T_wo = ros_pose_to_rt(res.pose)
 
     # query fetch base link pose in Gazebo world T_wb
-    res = gms_client(model_name='fetch', relative_entity_name='base_link')
+    res = gms_client(model_name="fetch", relative_entity_name="base_link")
     T_wb = ros_pose_to_rt(res.pose)
 
     # compute the object pose in robot base link T_bo
@@ -79,7 +78,7 @@ if __name__ == "__main__":
     """
 
     # query the demo cube pose
-    model_name = 'demo_cube'
+    model_name = "demo_cube"
     T = get_pose_gazebo(model_name)
     print(T)
 
@@ -90,10 +89,10 @@ if __name__ == "__main__":
     qt = ros_quat(mat2quat(T[:3, :3]))
 
     # broadcast the tf frame for visualization in rviz
-    rospy.init_node('tf_broadcaster')
+    rospy.init_node("tf_broadcaster")
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
-        br.sendTransform(trans, qt, rospy.Time.now(), model_name, 'base_link')
+        br.sendTransform(trans, qt, rospy.Time.now(), model_name, "base_link")
         rate.sleep()
-        print('publish tf ', model_name)
+        print("publish tf ", model_name)

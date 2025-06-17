@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-
-"""
-CS 6301 Homework 3 Programming
-Planning scene and IK
-"""
-
 import sys
 import time
 import rospy
@@ -19,35 +13,37 @@ from transforms3d.quaternions import mat2quat, quat2mat
 from geometry_msgs.msg import PoseStamped
 from trac_ik_python.trac_ik import IK
 
-roslib.load_manifest('gazebo_msgs')
+roslib.load_manifest("gazebo_msgs")
 from gazebo_msgs.srv import GetModelState
 from control_msgs.msg import FollowJointTrajectoryAction, FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
 # from gripper import Gripper
 
 # import actionlib
 import control_msgs.msg
+
 # import rospy
 # import sys, time
 # import argparse
-#import tmc_control_msgs.msg
+# import tmc_control_msgs.msg
 # HSR uses: tmc_control_msgs.msg.GripperApplyEffortActionGoal (?)
 
-CLOSED_POS = 0.0   # The position for a fully-closed gripper (meters).
+CLOSED_POS = 0.0  # The position for a fully-closed gripper (meters).
 OPENED_POS = 0.10  # The position for a fully-open gripper (meters).
-ACTION_SERVER = 'gripper_controller/gripper_action'
+ACTION_SERVER = "gripper_controller/gripper_action"
 
 # Unfortunately none of these work for the HSR :-( incompatible types
-#ACTION_SERVER = '/hsrb/gripper_controller/apply_force'
-#ACTION_SERVER = '/hsrb/gripper_controller/follow_joint_trajectory'
-#ACTION_SERVER = '/hsrb/grasp_state_request_action'
-#ACTION_SERVER = '/hsrb/gripper_controller/grasp'
+# ACTION_SERVER = '/hsrb/gripper_controller/apply_force'
+# ACTION_SERVER = '/hsrb/gripper_controller/follow_joint_trajectory'
+# ACTION_SERVER = '/hsrb/grasp_state_request_action'
+# ACTION_SERVER = '/hsrb/gripper_controller/grasp'
 
 
 class Gripper(object):
-    """Gripper controls the robot's gripper.
-    """
-    MIN_EFFORT = 35   # Min grasp force, in Newtons
+    """Gripper controls the robot's gripper."""
+
+    MIN_EFFORT = 35  # Min grasp force, in Newtons
     MAX_EFFORT = 100  # Max grasp force, in Newtons
 
     def __init__(self):
@@ -55,8 +51,7 @@ class Gripper(object):
         self._client.wait_for_server(rospy.Duration(10))
 
     def open(self):
-        """Opens the gripper.
-        """
+        """Opens the gripper."""
         goal = control_msgs.msg.GripperCommandGoal()
         goal.command.position = OPENED_POS
         self._client.send_goal_and_wait(goal, rospy.Duration(10))
@@ -82,7 +77,7 @@ class Gripper(object):
         self._client.send_goal_and_wait(goal, rospy.Duration(10))
 
 
-def ros_quat(tf_quat): #wxyz -> xyzw
+def ros_quat(tf_quat):  # wxyz -> xyzw
     quat = np.zeros(4)
     quat[-1] = tf_quat[0]
     quat[:-1] = tf_quat[1:]
@@ -133,12 +128,12 @@ def ros_pose_to_rt(pose):
 
 
 # Query pose of frames from the Gazebo environment
-def get_pose_gazebo(model_name, relative_entity_name=''):
+def get_pose_gazebo(model_name, relative_entity_name=""):
 
     def gms_client(model_name, relative_entity_name):
-        rospy.wait_for_service('/gazebo/get_model_state')
+        rospy.wait_for_service("/gazebo/get_model_state")
         try:
-            gms = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+            gms = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
             resp1 = gms(model_name, relative_entity_name)
             return resp1
         except (rospy.ServiceException, e):
@@ -149,7 +144,7 @@ def get_pose_gazebo(model_name, relative_entity_name=''):
     T_wo = ros_pose_to_rt(res.pose)
 
     # query fetch base link pose in Gazebo world T_wb
-    res = gms_client(model_name='fetch', relative_entity_name='base_link')
+    res = gms_client(model_name="fetch", relative_entity_name="base_link")
     T_wb = ros_pose_to_rt(res.pose)
 
     # compute the object pose in robot base link T_bo
@@ -162,7 +157,7 @@ def publish_tf(trans, qt, model_name):
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(10.0)
     while not rospy.is_shutdown():
-        br.sendTransform(trans, qt, rospy.Time.now(), model_name, 'base_link')
+        br.sendTransform(trans, qt, rospy.Time.now(), model_name, "base_link")
         rate.sleep()
 
 
@@ -170,8 +165,7 @@ def publish_tf(trans, qt, model_name):
 class FollowTrajectoryClient(object):
 
     def __init__(self, name, joint_names):
-        self.client = actionlib.SimpleActionClient("%s/follow_joint_trajectory" % name,
-                                                   FollowJointTrajectoryAction)
+        self.client = actionlib.SimpleActionClient("%s/follow_joint_trajectory" % name, FollowJointTrajectoryAction)
         rospy.loginfo("Waiting for %s..." % name)
         self.client.wait_for_server()
         self.joint_names = joint_names
@@ -200,12 +194,12 @@ if __name__ == "__main__":
     """
 
     # intialize ros node
-    rospy.init_node('planning_scene_block')
+    rospy.init_node("planning_scene_block")
 
     # query the demo cube pose
-    model_name = 'demo_cube'
+    model_name = "demo_cube"
     T = get_pose_gazebo(model_name)
-    print('pose of the demo cube')
+    print("pose of the demo cube")
     print(T)
 
     # translation
@@ -225,11 +219,15 @@ if __name__ == "__main__":
 
     # Raise the torso using just a controller
     rospy.loginfo("Raising torso...")
-    torso_action.move_to([0.4, ])
+    torso_action.move_to(
+        [
+            0.4,
+        ]
+    )
 
     # --------- initialize moveit components ------
     moveit_commander.roscpp_initialize(sys.argv)
-    group = moveit_commander.MoveGroupCommander('arm')
+    group = moveit_commander.MoveGroupCommander("arm")
     # planning scene
     scene = moveit_commander.PlanningSceneInterface()
     scene.clear()
@@ -272,7 +270,7 @@ if __name__ == "__main__":
 
     # get the current joints
     joints = group.get_current_joint_values()
-    print('current joint state of the robot')
+    print("current joint state of the robot")
     print(group.get_active_joints())
     print(joints)
 
@@ -296,10 +294,10 @@ if __name__ == "__main__":
     qt = ros_quat(mat2quat(R[:3, :3]))
 
     while 1:
-        sol = ik_solver.get_ik(seed_state,
-                    trans[0], trans[1], trans[2] + 0.15 + 0.06,  # X, Y, Z
-                    qt[0], qt[1], qt[2], qt[3])  # QX, QY, QZ, QW
-        print('Solution from IK:')
+        sol = ik_solver.get_ik(
+            seed_state, trans[0], trans[1], trans[2] + 0.15 + 0.06, qt[0], qt[1], qt[2], qt[3]  # X, Y, Z
+        )  # QX, QY, QZ, QW
+        print("Solution from IK:")
         print(ik_solver.joint_names)
         print(sol)
         break

@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-
-"""
-CS 6301 Homework 3 Programming
-Planning scene and IK
-"""
-
 import sys
 import time
 import rospy
@@ -17,11 +11,11 @@ from transforms3d.quaternions import mat2quat, quat2mat
 from geometry_msgs.msg import PoseStamped
 from trac_ik_python.trac_ik import IK
 
-roslib.load_manifest('gazebo_msgs')
+roslib.load_manifest("gazebo_msgs")
 from gazebo_msgs.srv import GetModelState
 
 
-def ros_quat(tf_quat): #wxyz -> xyzw
+def ros_quat(tf_quat):  # wxyz -> xyzw
     quat = np.zeros(4)
     quat[-1] = tf_quat[0]
     quat[:-1] = tf_quat[1:]
@@ -60,12 +54,12 @@ def ros_pose_to_rt(pose):
 
 
 # Query pose of frames from the Gazebo environment
-def get_pose_gazebo(model_name, relative_entity_name=''):
+def get_pose_gazebo(model_name, relative_entity_name=""):
 
     def gms_client(model_name, relative_entity_name):
-        rospy.wait_for_service('/gazebo/get_model_state')
+        rospy.wait_for_service("/gazebo/get_model_state")
         try:
-            gms = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+            gms = rospy.ServiceProxy("/gazebo/get_model_state", GetModelState)
             resp1 = gms(model_name, relative_entity_name)
             return resp1
         except (rospy.ServiceException, e):
@@ -76,7 +70,7 @@ def get_pose_gazebo(model_name, relative_entity_name=''):
     T_wo = ros_pose_to_rt(res.pose)
 
     # query fetch base link pose in Gazebo world T_wb
-    res = gms_client(model_name='fetch', relative_entity_name='base_link')
+    res = gms_client(model_name="fetch", relative_entity_name="base_link")
     T_wb = ros_pose_to_rt(res.pose)
 
     # compute the object pose in robot base link T_bo
@@ -90,12 +84,12 @@ if __name__ == "__main__":
     """
 
     # intialize ros node
-    rospy.init_node('planning_scene_block')
+    rospy.init_node("planning_scene_block")
 
     # query the demo cube pose
-    model_name = 'demo_cube'
+    model_name = "demo_cube"
     T = get_pose_gazebo(model_name)
-    print('pose of the demo cube')
+    print("pose of the demo cube")
     print(T)
 
     # translation
@@ -103,10 +97,9 @@ if __name__ == "__main__":
     # quaternion in ros
     qt = ros_quat(mat2quat(T[:3, :3]))
 
-
     # --------- initialize moveit components ------
     moveit_commander.roscpp_initialize(sys.argv)
-    group = moveit_commander.MoveGroupCommander('arm')
+    group = moveit_commander.MoveGroupCommander("arm")
     # planning scene
     scene = moveit_commander.PlanningSceneInterface()
     scene.clear()
@@ -151,12 +144,12 @@ if __name__ == "__main__":
     efpose = group.get_current_pose().pose
     position = efpose.position
     orientation = efpose.orientation
-    print('end-effector pose of the robot')
+    print("end-effector pose of the robot")
     print(efpose)
 
     # get the current joints
     joints = group.get_current_joint_values()
-    print('current joint state of the robot')
+    print("current joint state of the robot")
     print(group.get_active_joints())
     print(joints)
 
@@ -175,9 +168,16 @@ if __name__ == "__main__":
     seed_state = [0.0] * ik_solver.number_of_joints
     # seed_state = joints # + np.random.randn(ik_solver.number_of_joints) * 0.01
 
-    sol = ik_solver.get_ik(seed_state,
-                position.x, position.y, position.z,  # X, Y, Z
-                orientation.x, orientation.y, orientation.z, orientation.w)  # QX, QY, QZ, QW
-    print('Solution from IK:')
+    sol = ik_solver.get_ik(
+        seed_state,
+        position.x,
+        position.y,
+        position.z,  # X, Y, Z
+        orientation.x,
+        orientation.y,
+        orientation.z,
+        orientation.w,
+    )  # QX, QY, QZ, QW
+    print("Solution from IK:")
     print(ik_solver.joint_names)
     print(sol)
