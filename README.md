@@ -28,12 +28,12 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [1. Git](#1-git)
       - [2. Conda Environment Manager](#2-conda-environment-manager)
       - [3. Code Editor (Visual Studio Code for example)](#3-code-editor-visual-studio-code-for-example)
-  - [Environment Setup](#environment-setup)
-    - [Clone the Repository](#clone-the-repository)
-    - [Environment Setup (Local)](#environment-setup-local)
-    - [Environment Setup (Docker)](#environment-setup-docker)
-      - [1. Build the Docker Image](#1-build-the-docker-image)
-      - [2. Run the Docker Container](#2-run-the-docker-container)
+  - [Environment Setup (Docker)](#environment-setup-docker)
+      - [1. Clone the Repository](#1-clone-the-repository)
+      - [2. Build the Docker Image](#2-build-the-docker-image)
+      - [3. Run the Docker Container](#3-run-the-docker-container)
+        - [3.1 Compile the ros workspace (if you have not done so)](#31-compile-the-ros-workspace-if-you-have-not-done-so)
+        - [3.2 Setup the Conda Environment](#32-setup-the-conda-environment)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
@@ -43,9 +43,9 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [1. Slides](#1-slides-1)
       - [2. Practice](#2-practice)
       - [2. Useful Resources](#2-useful-resources)
-  - [Week 3: Fetch Gazebo Simulation](#week-3-fetch-gazebo-simulation)
-    - [1. Fetch Grasping Demo](#1-fetch-grasping-demo)
-    - [2. SceneReplica Reimplementation](#2-scenereplica-reimplementation)
+    - [Week 3: Fetch Gazebo Simulation](#week-3-fetch-gazebo-simulation)
+      - [1. Fetch Grasping Demo](#1-fetch-grasping-demo)
+      - [2. SceneReplica Reimplementation](#2-scenereplica-reimplementation)
 
 ## Prerequisites
 
@@ -67,10 +67,6 @@ sudo apt-get install git
   - Option One: [Github Desktop](https://desktop.github.com/).
   - Option Two: [Homebrew](https://brew.sh/).
 
-  ```bash
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-  ```
-
 #### 2. Conda Environment Manager
 
 Please refer to the official instruction [Installing Miniconda](https://docs.anaconda.com/miniconda/miniconda-install/) to install the miniconda.
@@ -84,9 +80,11 @@ Please refer to the official instruction [Installing Miniconda](https://docs.ana
   - [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy)
   - [Jupyter](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter)
 
-## Environment Setup
+## Environment Setup (Docker)
 
-### Clone the Repository
+If you prefer to use Docker, you can set up the environment using the provided Dockerfile. This allows you to run the project in a containerized environment.
+
+#### 1. Clone the Repository
 
 ```bash
 # Clone the repository
@@ -96,52 +94,26 @@ git clone https://github.com/JWRoboticsVision/CAST-STEM-2025.git
 cd CAST-STEM-2025
 ```
 
-### Environment Setup (Local)
+#### 2. Build the Docker Image
 
-- Create the Conda Environment
+Follow below instructions to build the Docker image based on your operating system.
 
-```bash
-conda create --prefix $PWD/.env python=3.11 -y
-conda activate $PWD/.env
-```
+- For Linux, follow the [Linux Installation Guide](./docs/container_installation_linux.md).
+- For Windows, follow the [Windows Installation Guide](./docs/container_installation_windows.md).
 
-- Install the PyTorch 2.1.1
-
-```bash
-python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
-```
-
-- Install the dependencies
-
-```bash
-python -m pip install --no-cache-dir -r requirements.txt
-```
-
-- ~~ROS Environment Setup in Conda [Optional]~~
-
-~~If you plan to run the ROS locally, refer to the [ROS Environment Setup](./docs/ROS_Environment_Setup.md) document for detailed steps. You can then run `roscore` to start the ROS master and debug your code under the ROS environment.~~
-
-### Environment Setup (Docker)
-
-If you prefer to use Docker, you can set up the environment using the provided Dockerfile. This allows you to run the project in a containerized environment.
-
-#### 1. Build the Docker Image
-
-Follow the instructions in the [container_installation.md](./docker/container_installation.md) to build the Docker image.
-
-#### 2. Run the Docker Container
+#### 3. Run the Docker Container
 
 - Run and enter the container:
 
 ```bash
 # Run the ros1-base container
-bash docker/container_handler.sh run ros1-user
+bash ./docker/container_handler.sh run ros1-user
 
 # Enter the container
-bash docker/container_handler.sh enter ros1-user
+bash ./docker/container_handler.sh enter ros1-user
 ```
 
-- Compile the ros workspace (if you have not done so)
+##### 3.1 Compile the ros workspace (if you have not done so)
 
 ```bash
 # Make sure you are not in the conda environment
@@ -158,41 +130,42 @@ git clone -b gazebo11 https://github.com/ZebraDevs/fetch_gazebo.git
 git clone -b ros1 https://github.com/ros/urdf_tutorial.git
 # Compile the workspace
 cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
+# Source the workspace
+source ~/catkin_ws/devel/setup.zsh
 # Verify the workspace
-source devel/setup.zsh
-roslaunch urdf_tutorial display.launch  model:=src/fetch_ros/fetch_description/robots/fetch.urdf
+roslaunch urdf_tutorial display.launch  model:=${HOME}/catkin_ws/src/fetch_ros/fetch_description/robots/fetch.urdf
 ```
 
-- Setup the Conda Environment
+##### 3.2 Setup the Conda Environment
 
-  - Create the conda environment in the code directory:
-    The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
+- Create the conda environment in the code directory:
+  The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
 
-  ```bash
-  # Go to the code directory
-  cd ~/code
-  # Create and activate the conda environment
-  conda create --prefix $PWD/.env python=3.11 libffi=3.4 -y
-  conda activate $PWD/.env
-  ```
+```bash
+# Go to the code directory
+cd ~/code
+# Create and activate the conda environment
+conda create --prefix $PWD/.env python=3.11 libffi=3.4 pyside2=5.15 -y
+conda activate $PWD/.env
+```
 
-  - Install the PyTorch 2.1.1
+- Install the PyTorch 2.1.1
 
-  ```bash
-  python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
-  ```
+```bash
+python -m pip install torch==2.1.1 torchvision==0.16.1 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+```
 
-  - Install the dependencies
+- Install the dependencies
 
-  ```bash
-  python -m pip install --no-cache-dir -r requirements.txt
-  ```
+```bash
+python -m pip install -r requirements.txt --no-cache-dir
+```
 
-  - Install the fetch_grasp package
+- Install the fetch_grasp package
 
-  ```bash
-  python -m pip install source/fetch_grasp
-  ```
+```bash
+python -m pip install source/fetch_grasp --no-cache-dir
+```
 
 - Install FoundationPose:
 
@@ -271,13 +244,13 @@ wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt 
   - [ROS TF2](http://wiki.ros.org/tf2)
 - [MoveIt 1 Tutorials](https://moveit.github.io/moveit_tutorials/) for ROS Noetic
 
-## Week 3: Fetch Gazebo Simulation
+### Week 3: Fetch Gazebo Simulation
 
 In this week, we will focus on the Fetch Gazebo simulation. The goal is to use the Fetch robot in the Gazebo simulation environment to perform grasping tasks.
 
-### 1. Fetch Grasping Demo
+#### 1. Fetch Grasping Demo
 
-Download and unzip the `my_demo.zip` file from [box](https://utdallas.box.com/s/puvnx931jzwk4o2bqrv5fnqnojzu80ar) and place it under the `./docker/ros/catkin_ws` directory.
+Download and unzip the `my_demo.zip` file from [box](https://utdallas.box.com/s/puvnx931jzwk4o2bqrv5fnqnojzu80ar) and place it under the `./docker/ros/catkin_ws/src` directory.
 
 - Run Docker container:
 
@@ -302,11 +275,10 @@ source ~/catkin_ws/devel/setup.zsh
 
 - Link the models of my_demo to the Gazebo model path:
 
+To load the models properly in Gazebo, we need to link the `my_demo` models to the Gazebo model path. This allows Gazebo to find the models when launching the simulation.
+
 ```bash
-# Go to the Gazebo model path
-cd ~/.gazebo
-# Link the my_demo models
-ln -s ~/catkin_ws/src/my_demo/models models
+cd ~/.gazebo && ln -s ~/catkin_ws/src/my_demo/models models
 ```
 
 - **Terminal 1:** Start the ROS master
@@ -317,7 +289,9 @@ roscore
 
 ![fetch_demo_roscore](./docs/resources/fetch_demo_roscore.png)
 
-- **Terminal 2:** Start the Fetch Gazebo simulation
+- **Terminal 2:** Start the Gazebo Simulation
+
+Below launch file will start the Gazebo simulation environment with a simple scene containing a Fetch robot, a table and the YCB Cracker object.
 
 ```bash
 roslaunch my_demo table_ycb.launch
@@ -335,13 +309,27 @@ roslaunch fetch_moveit_config move_group.launch
 
 - **Terminal 4:** Start Rviz
 
+The `fetch_gazebo.rviz` will display the color and depth images from the Fetch robot's cameras, the robot model, and the MoveIt PlanningScene.
+
 ```bash
-rviz -d config/rviz/fetch_gazebo.rviz
+rviz -d ${HOME}/code/config/rviz/fetch_gazebo.rviz
 ```
 
 ![fetch_demo_moveit_rviz](./docs/resources/fetch_demo_moveit_rviz.png)
 
 - **Terminal 5:** Run the Grasping
+
+The `grasp_cracker.py` script will execute below tasks:
+
+- Lift the Fetch robot's torso.
+- Setup the PlanningScene
+- Adjust the Fetch robot's camera to look at the tabletop.
+- Get the cracker 6D pose directly from the Gazebo simulation.
+- Load the grasp data for the cracker object.
+- Plan the grasping motion using MoveIt.
+  - First sort the grasps based on the distance to the gripper.
+  - Then plan the grasping motion for each grasp, until a valid grasp is found.
+- Execute the grasping motion.
 
 ```bash
 cd ~/catkin_ws/src/my_demo/scripts && python grasp_cracker.py
@@ -349,7 +337,7 @@ cd ~/catkin_ws/src/my_demo/scripts && python grasp_cracker.py
 
 ![fetch_demo_moveit_grasping](./docs/resources/fetch_demo_moveit_grasping.png)
 
-### 2. SceneReplica Reimplementation
+#### 2. SceneReplica Reimplementation
 
 In this section, we will reimplement the [SceneReplica](https://github.com/IRVLUTD/SceneReplica) benchmarking using the Fetch robot in the Gazebo simulation environment.
 
@@ -376,7 +364,7 @@ Datasets
          |--scene_ids.txt : selected scene ids on each line
 ```
 
-4. Follow [Gazebo (Simulation) Usage](https://github.com/IRVLUTD/SceneReplica/tree/main#gazebo-simulation-usage) to run the SceneReplica benchmarking in the Gazebo simulation environment.
+4. Run the SceneReplica benchmarking in the Gazebo simulation environment using the Docker container.
 
 - Run and Enter the Docker container:
 
@@ -388,13 +376,10 @@ bash docker/container_handler.sh enter ros1-user
 - Link the SceneReplica models to the Gazebo model path:
 
 ```bash
-# Go to the Gazebo model path
-cd ~/.gazebo
-# Link the SceneReplica models
-ln -s ~/code/third-party/SceneReplica/benchmarking/models models
+cd ~/.gazebo && rm models && ln -s ~/code/third-party/SceneReplica/Datasets/benchmarking/models
 ```
 
-- **Terminal 1:** Start the ROS master
+- **Terminal 1:** Start the ROS master (if not already running)
 
 ```bash
 roscore
@@ -403,42 +388,37 @@ roscore
 - **Terminal 2:** Start the Fetch Gazebo simulation with Just Robot
 
 ```bash
-# Go to the SceneReplica directory
-cd ~/code/third-party/SceneReplica
-# Launch the Just Robot simulation
-roslaunch launch/just_robot.launch
+roslaunch ~/code/third-party/SceneReplica/launch/just_robot.launch
 ```
 
-- **Terminal 3:** Setup the desired scene in Gazebo
+- **Terminal 3:** Start the MoveIt Planning Interface
+
+```bash
+roslaunch ~/code/third-party/SceneReplica/launch/moveit_sim.launch
+```
+
+- **Terminal 4:** Start Rviz
+
+```bash
+rviz -d ~/code/config/rviz/grasp_sim.rviz
+```
+
+- **Terminal 5:** Setup the desired scene in Gazebo
   Available scene ids: 10, 25, 27, 33, 36, 38, 39, 48, 56, 65, 68, 77, 83, 84, 104, 122, 130, 141, 148, 161
 
 ```bash
-# Go to the SceneReplica source directory
-cd ~/code/third-party/SceneReplica/src
-# Run the scene setup script
-python setup_scene_sim.py --data_dir ../Datasets/benchmarking
+cd ~/code/third-party/SceneReplica/src && python setup_scene_sim.py --data_dir ../Datasets/benchmarking
 # Select the scene id you want to setup
 # For example, to setup scene id 10
-```
-
-- **Terminal 4:** Start the MoveIt Planning Interface
-
-```bash
-# Go to the SceneReplica directory
-cd ~/code/third-party/SceneReplica
-# Launch the MoveIt Planning Interface
-roslaunch launch/moveit_sim.launch
 ```
 
 - **Terminal 5:** Run the Model-based Grasping
 
 ```bash
 # Go to the SceneReplica source directory
-cd ~/code/third-party/SceneReplica/src
-# Run the grasping script
-python bench_model_based_grasping.py \
-  --data_dir ../Datasets/benchmarking \
+cd ~/code/third-party/SceneReplica/src && python bench_model_based_grasping.py \
   --pose_method gazebo \
   --obj_order nearest_first \
+  --data_dir ../Datasets/benchmarking \
   --scene_idx 10
 ```
