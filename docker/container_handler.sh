@@ -17,12 +17,12 @@ fi
 if [ "$#" -lt 1 ]; then
   log_message "Usage: $0 <case_name> [<profile_name>]"
   log_message "  case_name: build, run, enter, stop (default: build)"
-  log_message "  profile_name: ros1-base, ros1-user (default: ros1-base)"
+  log_message "  profile_name: ros1-user, ros2-user (default: ros1-user)"
   exit 1
 fi
 
 CASE_NAME=${1:-build}
-PROFILE_NAME=${2:-ros1-base}
+PROFILE_NAME=${2:-ros1-user}
 
 # Validate inputs
 if [[ ! "$CASE_NAME" =~ ^(build|run|enter|stop)$ ]]; then
@@ -30,18 +30,18 @@ if [[ ! "$CASE_NAME" =~ ^(build|run|enter|stop)$ ]]; then
   exit 1
 fi
 
-if [[ ! "$PROFILE_NAME" =~ ^(ros1-base|ros1-user)$ ]]; then
-  log_message "Invalid profile name: $PROFILE_NAME. Valid: ros1-base, ros1-user."
+if [[ ! "$PROFILE_NAME" =~ ^(ros1-user|ros2-user)$ ]]; then
+  log_message "Invalid profile name: $PROFILE_NAME. Valid: ros1-user, ros2-user."
   exit 1
 fi
 
 # Determine container name and image tag
-if [[ "$PROFILE_NAME" == "ros1-base" ]]; then
-  CONTAINER_NAME="ubuntu20.04-ros-noetic-base"
-  IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic-base:latest"
-elif [[ "$PROFILE_NAME" == "ros1-user" ]]; then
-  CONTAINER_NAME="ubuntu20.04-ros-noetic-${HOST_UID}"
-  IMAGE_TAG="irvlutd/ubuntu20.04-ros-noetic:latest"
+if [[ "$PROFILE_NAME" == "ros1-user" ]]; then
+  CONTAINER_NAME="ubuntu20.04-cuda-${CUDA_VERSION}-ros-${ROS1_DISTRO}-${HOST_UID}"
+  IMAGE_TAG="irvlutd/ubuntu20.04-cuda-${CUDA_VERSION}-ros-${ROS1_DISTRO}-${HOST_UID}:latest"
+elif [[ "$PROFILE_NAME" == "ros2-user" ]]; then
+  CONTAINER_NAME="ubuntu22.04-cuda-${CUDA_VERSION}-ros-${ROS2_DISTRO}-${HOST_UID}"
+  IMAGE_TAG="irvlutd/ubuntu22.04-cuda-${CUDA_VERSION}-ros-${ROS2_DISTRO}-${HOST_UID}:latest"
 fi
 
 ###################
@@ -67,7 +67,10 @@ build_container() {
   fi
 
   log_message "Building image $IMAGE_TAG..."
-  docker compose --env-file ${DOCKER_DIR}/.env --file ${DOCKER_DIR}/docker-compose.yaml --profile $PROFILE_NAME build
+  docker compose \
+    --env-file ${DOCKER_DIR}/.env \
+    --file ${DOCKER_DIR}/docker-compose.yaml \
+    --profile $PROFILE_NAME build
 }
 
 # ---- Run ----

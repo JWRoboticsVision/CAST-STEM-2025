@@ -13,11 +13,7 @@ source "${SCRIPT_DIR}/../config/config.sh"
 # DOCKER ARGS
 #####################
 
-# Compose project name
-PROJECT_NAME="summer_camp-${HOST_UID}"
-
 # Base image and CUDA version
-BASE_DIST="ubuntu20.04"
 CUDA_VERSION="11.8.0"
 
 ### GPU Compute Capability for RTX 2080,3090,4090 (ref to https://developer.nvidia.com/cuda-gpus)
@@ -29,8 +25,11 @@ HOST_UID=$(id -u)
 HOST_GID=$(id -g)
 
 # ROS
-ROS1_APT_PACKAGE="ros-noetic-desktop-full"
-ROS2_APT_PACKAGE="ros-humble-desktop"
+ROS1_DISTRO="noetic"
+ROS2_DISTRO="humble"
+
+# Compose project name
+PROJECT_NAME="summer_camp-${HOST_UID}"
 
 # Miniconda version
 # reference: https://repo.anaconda.com/miniconda/

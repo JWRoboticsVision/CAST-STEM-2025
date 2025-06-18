@@ -1,10 +1,13 @@
 # --------------------- Base: CUDA + Ubuntu ---------------------
 ARG BASE_DIST_ARG=ubuntu20.04
 ARG CUDA_VERSION_ARG=11.8.0
-FROM nvidia/cuda:${CUDA_VERSION_ARG}-devel-${BASE_DIST_ARG}
 
+# https://catalog.ngc.nvidia.com/orgs/nvidia/containers/isaac-sim
+# https://gitlab.com/nvidia/container-images/opengl
+# https://gitlab.com/nvidia/cuda
+FROM nvidia/cuda:${CUDA_VERSION_ARG}-devel-${BASE_DIST_ARG}
 LABEL version="1.0"
-LABEL description="Unified ROS1 Dockerfile with CUDA, Vulkan, Conda, and dynamic user"
+LABEL description="Ubuntu 22.04 + CUDA 11.8 + OpenGL + Vulkan SDK + ROS1 Noetic + Miniconda3 + Dynamic User"
 
 # --------------------- Change to root user & bash shell ---------------------
 USER root
@@ -53,22 +56,17 @@ COPY ./config/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 
 # --------------------- ROS1 + MoveIt + Gazebo ---------------------
 # https://wiki.ros.org/noetic/Installation/Ubuntu
-ARG ROS1_APT_PACKAGES_ARG="ros-noetic-desktop-full"
+ARG ROS1_DISTRO_ARG="noetic"
 
 RUN --mount=type=cache,target=/var/cache/apt \
     echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list && \
     curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - && \
-    apt-get update && apt-get install -qq -y --no-install-recommends ${ROS1_APT_PACKAGES_ARG} && \
+    apt-get update && apt-get install -qq -y --no-install-recommends ros-${ROS1_DISTRO_ARG}-desktop-full && \
     source /opt/ros/noetic/setup.bash && \
     apt-get update && apt-get install -qq -y --no-install-recommends \
     python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool &&\
     # Bootstrap Rosdep
     rosdep init && \
-    # Clean up apt cache
-    apt-get -y autoremove && apt-get clean autoclean && rm -rf /var/lib/apt/lists/*
-
-# Other ROS1 packages
-RUN --mount=type=cache,target=/var/cache/apt \
     # # Gazebo11
     # # reference: https://classic.gazebosim.org/tutorials?tut=install_ubuntu
     # echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list && \
@@ -77,15 +75,15 @@ RUN --mount=type=cache,target=/var/cache/apt \
     # gazebo11 libgazebo11-dev \
     # Moveit1
     # reference: https://moveit.ai/install/
-    ros-noetic-moveit ros-noetic-moveit-visual-tools \
+    ros-${ROS1_DISTRO_ARG}-moveit ros-${ROS1_DISTRO_ARG}-moveit-visual-tools \
     # Other ROS1 packages
-    ros-noetic-ddynamic-reconfigure \
-    ros-noetic-image-geometry \
-    ros-noetic-camera-info-manager \
-    ros-noetic-rgbd-launch \
-    ros-noetic-robot-controllers \
-    ros-noetic-costmap-2d \
-    ros-noetic-trac-ik && \
+    ros-${ROS1_DISTRO_ARG}-ddynamic-reconfigure \
+    ros-${ROS1_DISTRO_ARG}-image-geometry \
+    ros-${ROS1_DISTRO_ARG}-camera-info-manager \
+    ros-${ROS1_DISTRO_ARG}-rgbd-launch \
+    ros-${ROS1_DISTRO_ARG}-robot-controllers \
+    ros-${ROS1_DISTRO_ARG}-costmap-2d \
+    ros-${ROS1_DISTRO_ARG}-trac-ik && \
     # Clean up apt cache
     apt-get -y autoremove && apt-get clean autoclean && rm -rf /var/lib/apt/lists/*
 
@@ -96,7 +94,8 @@ RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION_ARG}-
     bash miniconda.sh -b -p /opt/conda && rm miniconda.sh && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     find /opt/conda/ -follow -type f -name '*.a' -delete && \
-    find /opt/conda/ -follow -type f -name '*.js.map' -delete
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
+    chmod -R +x /opt/conda/
 
 # --------------------- Create Non-root User ---------------------
 ARG USER_NAME_ARG="my_user"
@@ -131,7 +130,7 @@ RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh
 
 # Create Common Directories (for bind mounts)
 RUN mkdir -p ${HOME}/.oh-my-zsh \
-    mkdir -p ${HOME}/catkin_ws/src \
+    mkdir -p ${HOME}/catkin_ws \
     mkdir -p ${HOME}/.gazebo \
     mkdir -p ${HOME}/.ros
 
@@ -144,4 +143,4 @@ COPY ./config/my_entrypoint.sh /usr/local/bin/my_entrypoint.sh
 RUN chmod +x /usr/local/bin/my_entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/my_entrypoint.sh"]
-WORKDIR /home/${USER_NAME_ARG}/code
+WORKDIR /home/${USER_NAME_ARG}
