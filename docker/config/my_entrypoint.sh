@@ -65,9 +65,6 @@ if [ -d "$HOME/.oh-my-zsh" ]; then
   chown -R "$HOST_UID:$HOST_GID" "$HOME/.oh-my-zsh"
 fi
 
-# --- Shell environment setup ---
-# USER_ENV_SETUP_COMMAND="source ${HOME}/.zshrc"
-
 # --- Final command ---
 if [ "$#" -eq 0 ]; then
   FINAL_COMMAND="zsh"
@@ -93,4 +90,13 @@ else
   else
     exec $GOSU_CMD zsh -ic "${FINAL_COMMAND}"
   fi
+fi
+
+# Change to my_user
+if [ "$(id -u)" -eq 0 ]; then
+  echo "Switching to user '$DOCKER_DEFAULT_USER' using gosu..."
+  exec gosu "$DOCKER_DEFAULT_USER" "$FINAL_COMMAND"
+else
+  echo "Already running as non-root user $(whoami)"
+  exec "$FINAL_COMMAND"
 fi

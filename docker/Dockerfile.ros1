@@ -7,7 +7,7 @@ ARG CUDA_VERSION_ARG=11.8.0
 # https://gitlab.com/nvidia/cuda
 FROM nvidia/cuda:${CUDA_VERSION_ARG}-devel-${BASE_DIST_ARG}
 LABEL version="1.0"
-LABEL description="Ubuntu 22.04 + CUDA 11.8 + OpenGL + Vulkan SDK + ROS1 Noetic + Miniconda3 + Dynamic User"
+LABEL description="Ubuntu 20.04 + CUDA 11.8 + OpenGL + Vulkan SDK + ROS1 Noetic + Miniconda3 + Dynamic User"
 
 # --------------------- Change to root user & bash shell ---------------------
 USER root
