@@ -1,6 +1,7 @@
 # -------------------------
 # FoundationPose Dependencies
 # -------------------------
+omegaconf>=2.3.0
 transformations==2024.5.24
 kornia==0.7.3
 joblib==1.4.2

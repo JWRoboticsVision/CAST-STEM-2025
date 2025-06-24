@@ -46,6 +46,10 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
     - [Week 3: Fetch Gazebo Simulation](#week-3-fetch-gazebo-simulation)
       - [1. Fetch Grasping Demo](#1-fetch-grasping-demo)
       - [2. SceneReplica Reimplementation](#2-scenereplica-reimplementation)
+    - [Week 4: Integrate FoundationPose, NIDS-Net with Fetch Gazebo Simulation](#week-4-integrate-foundationpose-nids-net-with-fetch-gazebo-simulation)
+      - [1. Prerequisites](#1-prerequisites)
+      - [2. Get RGBD Images and CameraInfo from ROS topics](#2-get-rgbd-images-and-camerainfo-from-ros-topics)
+      - [3. Run FoundationPose on the Saved RGBD Images](#3-run-foundationpose-on-the-saved-rgbd-images)
 
 ## Prerequisites
 
@@ -412,7 +416,7 @@ cd ~/code/third-party/SceneReplica/src && python setup_scene_sim.py --data_dir .
 # For example, to setup scene id 10
 ```
 
-- **Terminal 5:** Run the Model-based Grasping
+- **Terminal 6:** Run the Model-based Grasping
 
 ```bash
 # Go to the SceneReplica source directory
@@ -422,3 +426,46 @@ cd ~/code/third-party/SceneReplica/src && python bench_model_based_grasping.py \
   --data_dir ../Datasets/benchmarking \
   --scene_idx 10
 ```
+
+### Week 4: Integrate FoundationPose, NIDS-Net with Fetch Gazebo Simulation
+
+In this week, we will integrate the FoundationPose and NIDS-Net with the Fetch Gazebo simulation environment.
+
+#### 1. Prerequisites
+
+Repeat steps till Terminal 3 as described in the [Fetch Gazebo Simulation](#2-scenereplica-reimplementation) section to set up the Fetch Gazebo simulation environment for Scene id **10**.
+
+#### 2. Get RGBD Images and CameraInfo from ROS topics
+
+In this practice, we will subscribe to the RGBD images and CameraInfo published by the Fetch Gazebo simulation and save them under `/datasets/tmp` for later use.
+
+- Practice 1: get the color, depth images and cam_K from simulation.
+
+Complete the code in `/notebooks/08_FoundationPoseROS.py` to get the RGBD images and CameraInfo from the subscribed ROS topics published by the Fetch Gazebo simulation. The answer could be found [here](notebooks/08_FoundationPoseROS_answer.py).
+
+| Color Image                                | Depth Image                                    |
+| ------------------------------------------ | ---------------------------------------------- |
+| ![color](./docs/resources/color_image.png) | ![depth](./docs/resources/depth_image_vis.png) |
+
+- Practice 2: Use SAM2 based segmentation toolkit to get the segment mask for **Power Drill**.
+
+```bash
+python tools/01_run_sam2_segmentation.py
+```
+
+The segmentation results will be saved under `/datasets/tmp`.
+
+![mask](./docs/resources/mask_image_vis.png)
+
+#### 3. Run FoundationPose on the Saved RGBD Images
+
+Ensure you have installed the FoundationPose as described in the [Environment Setup](#environment-setup-docker) section.
+
+Now, we have the inputs ready, we can run the FoundationPose to get the 6D poses of the objects in the scene.
+
+- **Notebook [05_FoundationPoseWrapper.ipynb](./notebooks/05_FoundationPoseWrapper.ipynb)**: Understand how to run FoundationPose to estimate the 6D poses of the objects in the scene. The notebook will guide you through the process of preparing the inputs, running the FoundationPose, and visualizing the results.
+
+<!--
+#### 4. NIDS-Net: Run Segmentation on the Published RGB Image
+
+TBD -->

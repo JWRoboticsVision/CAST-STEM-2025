@@ -71,7 +71,7 @@ if __name__ == "__main__":
     bridge = CvBridge()
 
     # Ouptut directory
-    save_dir = PROJECT_ROOT / "outputs"
+    save_dir = PROJECT_ROOT / "datasets/tmp"
     save_dir.mkdir(parents=True, exist_ok=True)
 
     # Topics to subscribe to
