@@ -164,7 +164,7 @@ python -m pip install -r requirements.txt --no-cache-dir
 - Install the fetch_grasp package
 
 ```bash
-python -m pip install source/fetch_grasp --no-cache-dir
+python -m pip install -e source/fetch_grasp --no-cache-dir
 ```
 
 - Install FoundationPose:
