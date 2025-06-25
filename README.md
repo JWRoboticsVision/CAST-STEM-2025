@@ -34,6 +34,7 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [3. Run the Docker Container](#3-run-the-docker-container)
         - [3.1 Compile the ros workspace (if you have not done so)](#31-compile-the-ros-workspace-if-you-have-not-done-so)
         - [3.2 Setup the Conda Environment](#32-setup-the-conda-environment)
+        - [3.3 Install NIDS-Net](#33-install-nids-net)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
@@ -50,6 +51,7 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [1. Prerequisites](#1-prerequisites)
       - [2. Get RGBD Images and CameraInfo from ROS topics](#2-get-rgbd-images-and-camerainfo-from-ros-topics)
       - [3. Run FoundationPose on the Saved RGBD Images](#3-run-foundationpose-on-the-saved-rgbd-images)
+      - [4. NIDS-Net: Run Segmentation on the Published RGB Image](#4-nids-net-run-segmentation-on-the-published-rgb-image)
 
 ## Prerequisites
 
@@ -183,6 +185,49 @@ bash scripts/install_foundationpose.sh
 ```bash
 wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt -O ./checkpoints/sam2.1_t.pt
 ```
+
+##### 3.3 Install NIDS-Net
+
+- Run and enter the container:
+
+```bash
+bash ./docker/container_handler.sh run ros1-user
+bash ./docker/container_handler.sh enter ros1-user
+```
+
+- Download the NIDS-Net zip file from [box](https://utdallas.box.com/s/l90nf1e2luem7rtlf52g1lzwrh9uh19d) and extract it to the `./third-party` directory.
+
+- Install the NIDS-Net dependencies:
+
+```bash
+# Go to the NIDS-Net directory
+cd ~/code/third-party/NIDS-Net
+
+# Make sure you are in the conda environment
+conda activate ~/code/.env
+
+# Install the xformers
+python -m pip install xformers==0.0.23 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+
+# Install the NIDS-Net dependencies
+python -m pip install -r requirements_nidsnet.txt --no-cache-dir
+
+# Install the NIDS-Net package
+python setup.py install
+```
+<!--
+- Download the checkpoints for NIDS-Net:
+
+```bash
+# checkpoint for SAM
+mkdir -p ckpts/sam_weights && wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -O ckpts/sam_weights/sam_vit_h_4b8939.pth
+
+# checkpoint for GroundingDINO
+mkdir -p ckpts/gdino && wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth -O ckpts/gdino/groundingdino_swint_ogc.pth
+
+# checkpoint for MobileSAM
+mkdir -p ckpts/mobilesam && wget https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt -O ckpts/mobilesam/mobile_sam.pt
+``` -->
 
 ## Project Schedule
 
@@ -465,7 +510,6 @@ Now, we have the inputs ready, we can run the FoundationPose to get the 6D poses
 
 - **Notebook [05_FoundationPoseWrapper.ipynb](./notebooks/05_FoundationPoseWrapper.ipynb)**: Understand how to run FoundationPose to estimate the 6D poses of the objects in the scene. The notebook will guide you through the process of preparing the inputs, running the FoundationPose, and visualizing the results.
 
-
 #### 4. NIDS-Net: Run Segmentation on the Published RGB Image
 
 - Run Docker container:
@@ -475,11 +519,13 @@ bash ./docker/container_handler.sh run ros1-user
 ```
 
 - Enter the container:
+
 ```bash
 bash ./docker/container_handler.sh enter ros1-user
 ```
 
 - Download the project:
+
 ```bash
 git clone https://github.com/YoungSean/NIDS-Net.git
 ```
@@ -494,7 +540,9 @@ cd ~/code
 conda env create --prefix $PWD/.env_nids -f NIDS-Net/environment_new.yml
 conda activate $PWD/.env_nids
 ```
+
 - Install the pytorch and other packages:
+
 ```bash
 conda install pytorch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 pytorch-cuda=11.8 -c pytorch -c nvidia
 conda install xformers -c xformers
@@ -502,7 +550,7 @@ python setup.py install
 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 # for using SAM
 pip install git+https://github.com/facebookresearch/segment-anything.git
-# Use old supervision. 
+# Use old supervision.
 pip install supervision==0.20.0
 # The numpy version:
 conda install numpy=1.26.4
