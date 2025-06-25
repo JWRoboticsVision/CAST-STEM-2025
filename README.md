@@ -465,7 +465,73 @@ Now, we have the inputs ready, we can run the FoundationPose to get the 6D poses
 
 - **Notebook [05_FoundationPoseWrapper.ipynb](./notebooks/05_FoundationPoseWrapper.ipynb)**: Understand how to run FoundationPose to estimate the 6D poses of the objects in the scene. The notebook will guide you through the process of preparing the inputs, running the FoundationPose, and visualizing the results.
 
-<!--
+
 #### 4. NIDS-Net: Run Segmentation on the Published RGB Image
 
-TBD -->
+- Run Docker container:
+
+```bash
+bash ./docker/container_handler.sh run ros1-user
+```
+
+- Enter the container:
+```bash
+bash ./docker/container_handler.sh enter ros1-user
+```
+
+- Download the project:
+```bash
+git clone https://github.com/YoungSean/NIDS-Net.git
+```
+
+- Create the conda environment in the code directory:
+  The following commands will create a conda environment in the `~/code/.env_nids` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory. Download the environment_new.yml from our google drive link: https://drive.google.com/file/d/1aKSXVf39GbI4bRCNwxUfmcc9XOFCxu6b/view?usp=drive_link
+
+```bash
+# Go to the code directory
+cd ~/code
+# Create and activate the conda environment
+conda env create --prefix $PWD/.env_nids -f NIDS-Net/environment_new.yml
+conda activate $PWD/.env_nids
+```
+- Install the pytorch and other packages:
+```bash
+conda install pytorch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install xformers -c xformers
+python setup.py install
+python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+# for using SAM
+pip install git+https://github.com/facebookresearch/segment-anything.git
+# Use old supervision. 
+pip install supervision==0.20.0
+# The numpy version:
+conda install numpy=1.26.4
+```
+
+- Download ViT-H SAM weights. And move the SAM weight to "ckpts/sam_weights/sam_vit_h_4b8939.pth".
+
+```bash
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
+mkdir ckpts/sam_weights
+mv sam_vit_h_4b8939.pth ckpts/sam_weights
+```
+
+- Ros setup. Test the NIDS-Net on YCBV objects using ROS with gazebo.
+
+```bash
+# add some packages for ROS
+# Assume you are using ROS Noetic
+conda install -c conda-forge rospkg empy
+source /opt/ros/noetic/setup.bash
+pip install rosnumpy
+pip install easydict
+pip install transforms3d
+# test NIDS-Net on a YCBV image
+python ros/test_ycb_sample.py
+
+# This node is publishing the detection results for YCBV objects.
+python ros/test_images_segmentation_NIDS_Net.py
+# for visualization, open a new terminal window
+rosrun rviz rviz
+
+```
