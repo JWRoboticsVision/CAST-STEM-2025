@@ -42,9 +42,8 @@ else
 fi
 
 # --- Directory ownership ---
-echo "Fixing ownership of /home/$DOCKER_DEFAULT_USER and /opt/conda..."
+echo "Fixing ownership of /home/$DOCKER_DEFAULT_USER..."
 chown -R "$HOST_UID:$HOST_GID" "/home/$DOCKER_DEFAULT_USER"
-chown -R "$HOST_UID:$HOST_GID" /opt/conda
 
 # --- Environment ---
 export HOME="/home/$DOCKER_DEFAULT_USER"
@@ -70,26 +69,6 @@ if [ "$#" -eq 0 ]; then
   FINAL_COMMAND="zsh"
 else
   FINAL_COMMAND="$@"
-fi
-
-# --- Optional NVIDIA entrypoint ---
-NVIDIA_ENTRYPOINT="/opt/nvidia/nvidia_entrypoint.sh"
-
-# --- Final command logic ---
-if [ -x "$NVIDIA_ENTRYPOINT" ]; then
-  echo "Using NVIDIA entrypoint: $NVIDIA_ENTRYPOINT"
-
-  if [ "$#" -eq 0 ] || [ "$FINAL_COMMAND" = "zsh" ]; then
-    exec $GOSU_CMD "$NVIDIA_ENTRYPOINT" /bin/bash -c "exec zsh --login"
-  else
-    exec $GOSU_CMD "$NVIDIA_ENTRYPOINT" /bin/bash -c "exec zsh -ic '${FINAL_COMMAND}'"
-  fi
-else
-  if [ "$#" -eq 0 ] || [ "$FINAL_COMMAND" = "zsh" ]; then
-    exec $GOSU_CMD zsh --login
-  else
-    exec $GOSU_CMD zsh -ic "${FINAL_COMMAND}"
-  fi
 fi
 
 # Change to my_user

@@ -67,10 +67,11 @@ build_container() {
   fi
 
   log_message "Building image $IMAGE_TAG..."
-  docker compose \
-    --env-file ${DOCKER_DIR}/.env \
-    --file ${DOCKER_DIR}/docker-compose.yaml \
-    --profile $PROFILE_NAME build
+  cd ${DOCKER_DIR} && docker compose --profile ${PROFILE_NAME} build
+  # docker compose \
+  #   --env-file ${DOCKER_DIR}/.env \
+  #   --file ${DOCKER_DIR}/docker-compose.yaml \
+  #   --profile $PROFILE_NAME build
 }
 
 # ---- Run ----
