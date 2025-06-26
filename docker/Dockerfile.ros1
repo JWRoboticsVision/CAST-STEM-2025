@@ -137,10 +137,9 @@ RUN mkdir -p ${HOME}/.oh-my-zsh \
 # --------------------- Back to root: Copy EntryPoint ---------------------
 USER root
 SHELL ["/bin/bash", "-c"]
+WORKDIR /
 
 # Copy EntryPoint
 COPY ./config/my_entrypoint.sh /usr/local/bin/my_entrypoint.sh
 RUN chmod +x /usr/local/bin/my_entrypoint.sh
-
 ENTRYPOINT ["/usr/local/bin/my_entrypoint.sh"]
-WORKDIR /home/${USER_NAME_ARG}
