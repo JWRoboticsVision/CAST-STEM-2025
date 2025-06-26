@@ -9,9 +9,58 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 import cv2
 import matplotlib.pyplot as plt
-import av
+from matplotlib import colormaps
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import supervision as sv
+import av
+
+
+def compute_xyz(depth_img, fx, fy, px, py, height, width):
+    indices = np.indices((height, width), dtype=np.float32).transpose(1, 2, 0)
+    z_e = depth_img
+    x_e = (indices[..., 1] - px) * z_e / fx
+    y_e = (indices[..., 0] - py) * z_e / fy
+    xyz_img = np.stack([x_e, y_e, z_e], axis=-1)  # Shape: [H x W x 3]
+    return xyz_img
+
+
+def deproject_depth_image(depth_img, cam_K):
+    H, W = depth_img.shape
+
+    # Create a meshgrid of pixel coordinates
+    u_coords, v_coords = np.meshgrid(np.arange(W), np.arange(H), indexing="xy")
+    u_coords = u_coords.flatten()
+    v_coords = v_coords.flatten()
+
+    # Flatten the depth image to match the pixel coordinates
+    z_coords = depth_img.flatten()
+
+    # Convert pixel coordinates to normalized image coordinates
+    x_coords = (u_coords - cam_K[0, 2]) * z_coords / cam_K[0, 0]
+    y_coords = (v_coords - cam_K[1, 2]) * z_coords / cam_K[1, 1]
+
+    # Stack the coordinates to form homogeneous coordinates
+    points_3d = np.vstack((x_coords, y_coords, z_coords))  # Shape (3, N)
+    points_3d = points_3d.T  # Shape (N, 3)
+
+    return points_3d
+
+
+def colorize_depth_image(depth_image, colormap_name="jet"):
+    """Colorizes a depth image using a matplotlib colormap."""
+    valid_mask = (depth_image > 0.1) & (depth_image < 1.0)
+    if not np.any(valid_mask):
+        return np.zeros((*depth_image.shape, 3), dtype=np.uint8)
+    # Normalize valid depth to [0, 1]
+    depth_min = np.nanmin(depth_image[valid_mask])
+    depth_max = np.nanmax(depth_image[valid_mask])
+    depth_norm = np.clip((depth_image - depth_min) / (depth_max - depth_min), 0, 1)
+    # Apply colormap
+    colormap = colormaps.get_cmap(colormap_name)
+    colored_image = colormap(depth_norm)[:, :, :3]  # drop alpha
+    # Convert to uint8 RGB image
+    rgb_image = (colored_image * 255).astype(np.uint8)
+    return rgb_image
 
 
 def _apply_morphology(mask, operation, kernel_size=3, iterations=1):
@@ -665,6 +714,11 @@ def write_pose_to_txt(pose_path, pose, header="", fmt="%.8f"):
         np.savetxt(str(pose_path), pose, fmt=fmt, header=header)
     except Exception as e:
         raise ValueError(f"Failed to write pose to '{pose_path}': {e}")
+
+
+def extract_masks_from_labels(labels):
+    masks = [(labels == i).astype(np.uint8) for i in np.unique(labels) if i != 0]
+    return masks
 
 
 def draw_annotated_image(rgb_image, boxes=None, masks=None, labels=None):

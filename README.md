@@ -32,9 +32,20 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [1. Clone the Repository](#1-clone-the-repository)
       - [2. Build the Docker Image](#2-build-the-docker-image)
       - [3. Run the Docker Container](#3-run-the-docker-container)
-        - [3.1 Compile the ros workspace (if you have not done so)](#31-compile-the-ros-workspace-if-you-have-not-done-so)
+        - [3.1 Compile the ROS Workspace (if you have not done so)](#31-compile-the-ros-workspace-if-you-have-not-done-so)
         - [3.2 Setup the Conda Environment](#32-setup-the-conda-environment)
-        - [3.3 Install NIDS-Net](#33-install-nids-net)
+          - [3.2.1 Install the fetch\_grasp package](#321-install-the-fetch_grasp-package)
+          - [3.2.2 Install FoundationPose:](#322-install-foundationpose)
+          - [3.2.3 Install NIDS-Net](#323-install-nids-net)
+        - [3.3 Download the Datasets](#33-download-the-datasets)
+          - [3.2.1 Link the models to the Gazebo model path in the Docker container:](#321-link-the-models-to-the-gazebo-model-path-in-the-docker-container)
+  - [Example Usage](#example-usage)
+      - [1. Run, Enter and Stop the Docker container:](#1-run-enter-and-stop-the-docker-container)
+      - [2. Run the SAM2 Segmentation](#2-run-the-sam2-segmentation)
+      - [3. Run the NIDS-Net Segmentation](#3-run-the-nids-net-segmentation)
+      - [4. Run the FoundationPose](#4-run-the-foundationpose)
+      - [5. Run the FoundationPose on NIDS-Net Segmentation Results](#5-run-the-foundationpose-on-nids-net-segmentation-results)
+      - [6. Run the Fetch Grasping in Gazebo Simulation](#6-run-the-fetch-grasping-in-gazebo-simulation)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
@@ -113,13 +124,13 @@ Follow below instructions to build the Docker image based on your operating syst
 
 ```bash
 # Run the ros1-base container
-bash ./docker/container_handler.sh run ros1-user
+bash ./docker/container_handler.sh run
 
 # Enter the container
-bash ./docker/container_handler.sh enter ros1-user
+bash ./docker/container_handler.sh enter
 ```
 
-##### 3.1 Compile the ros workspace (if you have not done so)
+##### 3.1 Compile the ROS Workspace (if you have not done so)
 
 ```bash
 # Make sure you are not in the conda environment
@@ -128,24 +139,29 @@ conda deactivate
 rosdep update --rosdistro=$ROS_DISTRO
 # Go to the catkin workspace
 mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/src
+
 # Fetch Robot ROS package
 git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
 # Fetch Gazebo Simulator
 git clone -b gazebo11 https://github.com/ZebraDevs/fetch_gazebo.git
 # Clone the urdf_tutorial
 git clone -b ros1 https://github.com/ros/urdf_tutorial.git
+
 # Compile the workspace
 cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
-# Source the workspace
-source ~/catkin_ws/devel/setup.zsh
-# Verify the workspace
+```
+
+- Verify the workspace
+
+```bash
 roslaunch urdf_tutorial display.launch  model:=${HOME}/catkin_ws/src/fetch_ros/fetch_description/robots/fetch.urdf
 ```
 
 ##### 3.2 Setup the Conda Environment
 
 - Create the conda environment in the code directory:
-  The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
+
+The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
 
 ```bash
 # Go to the code directory
@@ -154,6 +170,8 @@ cd ~/code
 conda create --prefix $PWD/.env python=3.11 libffi=3.4 pyside2=5.15 -y
 conda activate $PWD/.env
 ```
+
+###### 3.2.1 Install the fetch_grasp package
 
 - Install the PyTorch 2.1.1
 
@@ -173,61 +191,155 @@ python -m pip install -r requirements.txt --no-cache-dir
 python -m pip install -e source/fetch_grasp --no-cache-dir
 ```
 
-- Install FoundationPose:
-
-```bash
-# Install FoundationPose
-bash scripts/install_foundationpose.sh
-```
-
-- Download SAM2 models:
+- Download SAM2 checkpoint:
 
 ```bash
 wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt -O ./checkpoints/sam2.1_t.pt
 ```
 
-##### 3.3 Install NIDS-Net
+###### 3.2.2 Install FoundationPose:
 
-- Run and enter the container:
+Download the FoundationPose zip file from [box](https://utdallas.box.com/s/mmg01ce4stg1txoauovy7j36fa2mbwsi) and extract it to the `./third-party` directory.
 
 ```bash
-bash ./docker/container_handler.sh run ros1-user
-bash ./docker/container_handler.sh enter ros1-user
+bash scripts/install_foundationpose.sh
 ```
 
-- Download the NIDS-Net zip file from [box](https://utdallas.box.com/s/l90nf1e2luem7rtlf52g1lzwrh9uh19d) and extract it to the `./third-party` directory.
+###### 3.2.3 Install NIDS-Net
 
-- Install the NIDS-Net dependencies:
+Download the NIDS-Net zip file from [box](https://utdallas.box.com/s/l90nf1e2luem7rtlf52g1lzwrh9uh19d) and extract it to the `./third-party` directory.
 
 ```bash
-# Go to the NIDS-Net directory
-cd ~/code/third-party/NIDS-Net
-
-# Make sure you are in the conda environment
-conda activate ~/code/.env
-
-# Install the xformers
-python -m pip install xformers==0.0.23 --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
-
-# Install the NIDS-Net dependencies
-python -m pip install -r requirements_nidsnet.txt --no-cache-dir
-
-# Install the NIDS-Net package
-python setup.py install
+bash scripts/install_nidsnet.sh
 ```
-<!--
-- Download the checkpoints for NIDS-Net:
+
+##### 3.3 Download the Datasets
+
+Download the zip files from [box](https://utdallas.box.com/s/affmfpptc04qkmyb532atjrqn5q9d53g) and extract them to the `~/code/datasets` directory. The datasets directory should look like this:
+
+```
+./datasets
+├── demo
+├── final_scenes
+├── grasp_data
+├── models
+├── pose_data
+```
+
+###### 3.2.1 Link the models to the Gazebo model path in the Docker container:
 
 ```bash
-# checkpoint for SAM
-mkdir -p ckpts/sam_weights && wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -O ckpts/sam_weights/sam_vit_h_4b8939.pth
+cd ~/.gazebo && rm -rf models && ln -s ~/code/datasets/models models
+```
 
-# checkpoint for GroundingDINO
-mkdir -p ckpts/gdino && wget https://github.com/IDEA-Research/GroundingDINO/releases/download/v0.1.0-alpha/groundingdino_swint_ogc.pth -O ckpts/gdino/groundingdino_swint_ogc.pth
+## Example Usage
 
-# checkpoint for MobileSAM
-mkdir -p ckpts/mobilesam && wget https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt -O ckpts/mobilesam/mobile_sam.pt
-``` -->
+#### 1. Run, Enter and Stop the Docker container:
+
+- Run the Docker container:
+
+```bash
+bash docker/container_handler.sh run
+```
+
+- Enter the Docker container shell:
+
+```bash
+bash docker/container_handler.sh enter
+```
+
+- Stop the Docker container:
+
+```bash
+bash docker/container_handler.sh stop
+```
+
+#### 2. Run the SAM2 Segmentation
+
+The demo script will load the color image from `./demo/ros/color_image.png` and the user could segment the image using SAM2. The segmentation results will be saved under `./demo/ros/mask_image.png`.
+
+```bash
+python ~/code/tools/test_sam2_segmentation.py
+```
+
+- `Ctrl + Left Click`: prompt positive points.
+- `Ctrl + Right Click`: prompt negative points.
+- `Esc`: exit the segmentation toolkit.
+- `Add Mask`: add current segmentation mask with shown label.
+- `Remove Mask`: remove last added mask.
+- `Save Mask`: save the current segmentation mask to `./demo/ros/mask_image.png`.
+
+![demo_sam2_segmentation](./docs/resources/demo_sam2_segmentation.gif)
+
+#### 3. Run the NIDS-Net Segmentation
+
+The demo script will load the color image from `./demo/ros/color_image.png` and segment the objects in the image using NIDS-Net. The segmentation results will be saved under `./demo/ros/`.
+
+```bash
+python ~/code/tools/tools/test_nidsnet.py
+```
+
+#### 4. Run the FoundationPose
+
+The demo script will load the inputs from `./demo/ros/` and estimate the 6D pose of target object `035_power_drill` using FoundationPose. Results will be saved under `./demo/ros/`.
+
+```bash
+python ~/code/tools/test_foundationpose.py
+```
+
+| Segmentation Mask                                            | Rendered Pose                               |
+| ------------------------------------------------------------ | ------------------------------------------- |
+| ![mask](./docs/resources/mask_image_035_power_drill_vis.png) | ![pose](./docs/resources/ob_in_cam_vis.png) |
+
+#### 5. Run the FoundationPose on NIDS-Net Segmentation Results
+
+The demo script will load the NIDS-Net segmentation results from `./demo/ros/` and estimate the 6D pose of labeled objects in the mask. Results will be saved under `./demo/ros/`.
+
+```bash
+python ~/code/tools/test_nidsnet_and_fdpose.py
+```
+
+| Segmentation Mask                                    | Rendered Pose                                     |
+| ---------------------------------------------------- | ------------------------------------------------- |
+| ![mask](./docs/resources/mask_image_nidsnet_vis.png) | ![pose](./docs/resources/ob_in_cam_poses_vis.png) |
+
+#### 6. Run the Fetch Grasping in Gazebo Simulation
+
+- **Terminal 1:** Start the ROS master (if not already running)
+
+```bash
+roscore
+```
+
+- **Terminal 2:** Start the Fetch Gazebo simulation with Just Robot
+
+```bash
+roslaunch ~/code/config/launch/just_robot.launch
+```
+
+- **Terminal 3:** Start the MoveIt Planning Interface
+
+```bash
+roslaunch ~/code/config/launch/moveit_sim.launch
+```
+
+- **Terminal 4:** Start Rviz
+
+```bash
+rviz -d ~/code/config/rviz/grasp_sim.rviz
+```
+
+- **Terminal 5:** Setup the tabletop scene and do grasping
+
+The `grasp_cracker.py` script will execute below tasks:
+
+- Create the tabletop scene in Gazebo with randomly placed YCB Cracker object.
+- Setup the MoveIt PlanningScene and do motion planning for each object.
+- Once a FULL grasp is found, the Fetch robot will execute the grasping motion.
+
+```bash
+python ~/code/tools/fetch_grasp_sim.py
+```
 
 ## Project Schedule
 
@@ -512,74 +624,12 @@ Now, we have the inputs ready, we can run the FoundationPose to get the 6D poses
 
 #### 4. NIDS-Net: Run Segmentation on the Published RGB Image
 
-- Run Docker container:
+First, follow steps in [Run the Fetch Grasping in Gazebo Simulation](#6-run-the-fetch-grasping-in-gazebo-simulation) to create the Gazebo simulation environment with the Fetch robot and the YCB Cracker object. No grasping is needed in this practice.
 
-```bash
-bash ./docker/container_handler.sh run ros1-user
-```
+Next, finish the code in [09_fdpose_and_nidsnet_sim.py](notebooks/09_fdpose_and_nidsnet_sim.py) with below tasks:
 
-- Enter the container:
-
-```bash
-bash ./docker/container_handler.sh enter ros1-user
-```
-
-- Download the project:
-
-```bash
-git clone https://github.com/YoungSean/NIDS-Net.git
-```
-
-- Create the conda environment in the code directory:
-  The following commands will create a conda environment in the `~/code/.env_nids` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory. Download the environment_new.yml from our google drive link: https://drive.google.com/file/d/1aKSXVf39GbI4bRCNwxUfmcc9XOFCxu6b/view?usp=drive_link
-
-```bash
-# Go to the code directory
-cd ~/code
-# Create and activate the conda environment
-conda env create --prefix $PWD/.env_nids -f NIDS-Net/environment_new.yml
-conda activate $PWD/.env_nids
-```
-
-- Install the pytorch and other packages:
-
-```bash
-conda install pytorch==2.2.1 torchvision==0.17.1 torchaudio==2.2.1 pytorch-cuda=11.8 -c pytorch -c nvidia
-conda install xformers -c xformers
-python setup.py install
-python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
-# for using SAM
-pip install git+https://github.com/facebookresearch/segment-anything.git
-# Use old supervision.
-pip install supervision==0.20.0
-# The numpy version:
-conda install numpy=1.26.4
-```
-
-- Download ViT-H SAM weights. And move the SAM weight to "ckpts/sam_weights/sam_vit_h_4b8939.pth".
-
-```bash
-wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth
-mkdir ckpts/sam_weights
-mv sam_vit_h_4b8939.pth ckpts/sam_weights
-```
-
-- Ros setup. Test the NIDS-Net on YCBV objects using ROS with gazebo.
-
-```bash
-# add some packages for ROS
-# Assume you are using ROS Noetic
-conda install -c conda-forge rospkg empy
-source /opt/ros/noetic/setup.bash
-pip install rosnumpy
-pip install easydict
-pip install transforms3d
-# test NIDS-Net on a YCBV image
-python ros/test_ycb_sample.py
-
-# This node is publishing the detection results for YCBV objects.
-python ros/test_images_segmentation_NIDS_Net.py
-# for visualization, open a new terminal window
-rosrun rviz rviz
-
-```
+- Subscribe the color image, depth image and camera info from the Fetch Gazebo simulation: refer to [08_FoundationPoseROS_answer.py](notebooks/08_FoundationPoseROS_answer.py) to get the color, depth images and camera info.
+- Run the NIDS-Net segmentation on the subscribed color image: refer to [tools/test_nidsnet.py](tools/test_nidsnet.py) to run the NIDS-Net segmentation on the color image.
+- Run the FoundationPose on the NIDS-Net segmentation results: refer to [tools/test_nidsnet_and_fdpose.py](tools/test_nidsnet_and_fdpose.py) to run the FoundationPose on the NIDS-Net segmentation results.
+- The estimated poses by FoundationPose should be close to the ground truth poses of the objects in the scene.
+- The answer could be found [here](notebooks/09_fdpose_and_nidsnet_sim_answer.py). (**Will be available this Friday**)

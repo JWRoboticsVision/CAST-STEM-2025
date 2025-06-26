@@ -4,40 +4,17 @@
 source "$(dirname "$0")/config.sh"
 FD_POSE_DIR="${PROJ_ROOT}/third-party/FoundationPose"
 
-# Function to download FoundationPose checkpoints
-download_fd_checkpoints() {
-  refiner_url="https://drive.google.com/drive/folders/1BEQLZH69UO5EOfah-K9bfI3JyP9Hf7wC?usp=sharing"
-  scorer_url="https://drive.google.com/drive/folders/12Te_3TELLes5cim1d7F7EBTwUSe7iRBj?usp=sharing"
-  CHECKPOINT_DIR="${FD_POSE_DIR}/weights"
-
-  log_message "Starting FoundationPose checkpoints download..."
-
-  # Refiner
-  log_message "Downloading refiner checkpoint..."
-  gdown --fuzzy "$refiner_url" --folder --output "${CHECKPOINT_DIR}/" || handle_error "Failed to download refiner checkpoint"
-
-  # Scorer
-  log_message "Downloading scorer checkpoint..."
-  gdown --fuzzy "$scorer_url" --folder --output "${CHECKPOINT_DIR}/" || handle_error "Failed to download scorer checkpoint"
-
-  log_message "FoundationPose checkpoints downloaded successfully."
-}
-
 # Initialize the FoundationPose submodule
-log_message "Initializing FoundationPose submodule..."
+log_message "Checking FoundationPose submodule..."
 if [ -d "${FD_POSE_DIR}" ]; then
-  log_message "FoundationPose submodule directory already exists: ${FD_POSE_DIR}"
+  log_message "FoundationPose submodule directory found: ${FD_POSE_DIR}"
 else
-  if git clone --recursive https://github.com/NVlabs/FoundationPose.git "${FD_POSE_DIR}"; then
-    log_message "FoundationPose submodule cloned successfully."
-  else
-    handle_error "Failed to clone FoundationPose submodule."
-  fi
+  handle_error "Please download the FoundationPose code first!!!"
 fi
 
 # Install Python dependencies from requirements_fdpose.txt
 log_message "Installing Python dependencies from requirements_fdpose.txt..."
-if "${PYTHON_PATH}" -m pip install --no-cache-dir -r "${PROJ_ROOT}/requirements_fdpose.txt"; then
+if "${PYTHON_PATH}" -m pip install --quiet --no-cache-dir -r "${PROJ_ROOT}/requirements_fdpose.txt"; then
   log_message "Python dependencies installed successfully."
 else
   handle_error "Failed to install Python dependencies."
@@ -45,7 +22,7 @@ fi
 
 # Install NVDiffRast
 log_message "Installing NVDiffRast..."
-if "${PYTHON_PATH}" -m pip install --no-cache-dir "git+https://github.com/NVlabs/nvdiffrast.git@v0.3.3"; then
+if "${PYTHON_PATH}" -m pip install --quiet --no-cache-dir "git+https://github.com/NVlabs/nvdiffrast.git@v0.3.3"; then
   log_message "NVDiffRast installed successfully."
 else
   handle_error "Failed to install NVDiffRast."
@@ -53,7 +30,7 @@ fi
 
 # Install PyTorch3D
 log_message "Installing PyTorch3D..."
-if "${PYTHON_PATH}" -m pip install --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@V0.7.8"; then
+if "${PYTHON_PATH}" -m pip install --quiet --no-cache-dir "git+https://github.com/facebookresearch/pytorch3d.git@V0.7.8"; then
   log_message "PyTorch3D installed successfully."
 else
   handle_error "Failed to install PyTorch3D."
@@ -100,6 +77,3 @@ fi
 cd "$PROJ_ROOT" || handle_error "Failed to return to project root directory: $PROJ_ROOT"
 
 log_message "All build steps completed successfully."
-
-# Download FoundationPose checkpoints
-download_fd_checkpoints
