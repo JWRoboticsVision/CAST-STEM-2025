@@ -9,7 +9,7 @@ __pycache__/
 # IDEs and editors
 .idea
 .eclipse
-.vscode
+# .vscode
 
 # Mac
 .DS_Store
