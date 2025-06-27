@@ -134,7 +134,6 @@ def plan_grasp(group, scene, RT_grasps_base, grasp_index, obj_name, RT_obj, frac
     return None, -1, None, None
 
 
-
 def get_pose(object_name: str, pose_method="gazebo"):
     """
     Calls the suitable function depending on pose method
@@ -308,7 +307,7 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
 
 
 def create_scene():
-    rospy.loginfo("=" * 60 + "\nCreating scene in Gazebo...\n" + "=" * 60)
+    rospy.loginfo("=" * 5 + " Creating scene in Gazebo... " + "=" * 5)
     # ---------- Add objects to the scene ----------
     sample_scene, _ = scene_m.create_scene()
     object_names = sorted(sample_scene.keys())
@@ -321,7 +320,7 @@ def create_scene():
     rospy.loginfo(f"Adding objects...")
     for obj_name in object_names:
         objs.add_object(obj_name, sample_scene[obj_name])
-    rospy.sleep(2)  # wait for objects to be added
+    rospy.sleep(3.0)  # wait for objects to be added
     print("Objects added to the scene!\n" + f"{object_names}")
 
     return sample_scene, object_names
