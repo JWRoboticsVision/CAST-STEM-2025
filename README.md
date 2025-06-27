@@ -633,3 +633,9 @@ Next, finish the code in [09_fdpose_and_nidsnet_sim.py](notebooks/09_fdpose_and_
 - Run the FoundationPose on the NIDS-Net segmentation results: refer to [tools/test_nidsnet_and_fdpose.py](tools/test_nidsnet_and_fdpose.py) to run the FoundationPose on the NIDS-Net segmentation results.
 - The estimated poses by FoundationPose should be close to the ground truth poses of the objects in the scene.
 - The answer could be found [here](notebooks/09_fdpose_and_nidsnet_sim_answer.py). (**Will be available this Friday**)
+
+The results will be saved under `/datasets/tmp/fdpose_nidsnet_sim`.
+
+| Object Poses by FoundationPose                                     | Object Poses by Gazebo (GroundTruth)                           |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| ![09_poses_fd](./docs/resources/09_ob_in_cam_poses_vis%20copy.png) | ![09_poses_gt](./docs/resources/09_ob_in_cam_poses_gt_vis.png) |
