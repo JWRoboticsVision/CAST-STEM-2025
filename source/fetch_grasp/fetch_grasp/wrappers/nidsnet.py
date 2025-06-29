@@ -11,7 +11,6 @@ from PIL import Image as PILImg
 import cv2
 import pytorch_lightning as pl
 import logging
-from copy import deepcopy
 
 
 from fetch_grasp.utils import add_path, PROJECT_ROOT
@@ -23,9 +22,7 @@ from robokit.ObjDetection import GroundingDINOObjectPredictor, SegmentAnythingPr
 feat_dict = read_data_from_json(
     f"{PROJECT_ROOT}/third-party/NIDS-Net/ros/weight_obj_shuffle2_0501_bs32_epoch_500_adapter_descriptors_pbr.json"
 )
-
 weight_adapter_path = f"{PROJECT_ROOT}/third-party/NIDS-Net/ros/bop_obj_shuffle_weight_0430_temp_0.05_epoch_500_lr_0.001_bs_32_weights.pth"
-
 descriptor_size = {
     "dinov2_vits14": 384,
     "dinov2_vitb14": 768,
@@ -270,9 +267,9 @@ def apply_nms_to_results(results, iou_threshold=0.5):
     if len(results) == 0:
         return results
 
-    boxes = torch.stack([result["bbox"] for result in results])
-    scores = torch.tensor([result["score"] for result in results])
-    category_ids = torch.tensor([result["category_id"] for result in results])
+    boxes = torch.stack([result["bbox"] for result in results]).cpu()
+    scores = torch.tensor([result["score"] for result in results]).cpu()
+    category_ids = torch.tensor([result["category_id"] for result in results]).cpu()
 
     keep_ids = []
     unique_category_ids = torch.unique(category_ids)
@@ -407,15 +404,11 @@ def get_background_mask(foreground_masks):
 
 
 class NIDS:
-
     def __init__(self, template_features, use_adapter=False, adapter_path=None, gdino_threshold=0.3, sam_model="vit_h"):
-        encoder = torch.hub.load("facebookresearch/dinov2", "dinov2_vitl14")
-        encoder.to("cuda")
-        encoder.eval()
-        self.encoder = encoder
+        self.encoder = torch.hub.load("facebookresearch/dinov2", "dinov2_vitl14").to("cuda").eval()
         self.gdino = GroundingDINOObjectPredictor(threshold=gdino_threshold)
         self.SAM = SegmentAnythingPredictor(vit_model=sam_model)
-        self.descriptor_model = CustomDINOv2(encoder)
+        self.descriptor_model = CustomDINOv2(self.encoder)
         # set up the template features for the object instances
         # the shape of the template features is [num_objects, num_examples, feature_dim]
         # To compute the cosine similarity between the template features and the scene features, we need to normalize the features
@@ -486,10 +479,10 @@ class NIDS:
         self.template_features = nn.functional.normalize(query_FFA_decriptors, dim=1, p=2)
         return mask_tensor
 
-    def step(self, image_np, THRESHOLD_OBJECT_SCORE=0.60, visualize=False):
+    @torch.no_grad()
+    def step(self, image_np, THRESHOLD_OBJECT_SCORE=0.60):
         print("the shape of template features is: ", self.template_features.shape)
         image_pil = PILImg.fromarray(image_np).convert("RGB")
-        # image_pil.show()
         bboxes, phrases, gdino_conf = self.gdino.predict(image_pil, "objects")
         w, h = image_pil.size  # Get image width and height
         # Scale bounding boxes to match the original image size
@@ -503,8 +496,7 @@ class NIDS:
         query_FFA_decriptors, query_appe_descriptors, query_cls_descriptors = self.descriptor_model(image_np, proposals)
         query_decriptors = query_FFA_decriptors
         if self.use_adapter:
-            with torch.no_grad():
-                query_decriptors = self.adapter(query_decriptors)
+            query_decriptors = self.adapter(query_decriptors)
         scene_feature = nn.functional.normalize(query_decriptors, dim=1, p=2)
         template_features = self.template_features.view(self.num_objects * self.num_examples, -1)
         num_example = self.num_examples
@@ -522,14 +514,14 @@ class NIDS:
             result["category_id"] = initial_result[i].item() + 1  # object ids start from 1
             result["bbox"] = proposals["boxes"][i].cpu()
             result["area"] = proposals["masks"][i].cpu().sum().item()
-            result["score"] = float(max_ins_sim[i])
-            result["image_height"] = image_np.shape[0]
-            result["image_width"] = image_np.shape[1]
+            result["score"] = float(max_ins_sim[i].item())
+            result["image_height"] = h
+            result["image_width"] = w
             result["segmentation"] = proposals["masks"][i].cpu()
             results.append(result)
 
         results = apply_nms_to_results(results, iou_threshold=0.5)
-        mask = torch.zeros([image_np.shape[0], image_np.shape[1]])
+        mask = torch.zeros([image_np.shape[0], image_np.shape[1]]).cpu()
         if len(results) == 0:
             return results, mask
         new_mask = results[0]["segmentation"]
@@ -537,34 +529,6 @@ class NIDS:
         for i in range(len(results)):
             new_mask = results[i]["segmentation"]
             mask = torch.max(mask, new_mask * (results[i]["category_id"]))
-        if visualize:
-            # Set up the matplotlib figure and axes with 3 subplots
-            fig, axes = plt.subplots(1, 3, figsize=(20, 20))  # Adjust figsize to your needs
-
-            # Plot the first image
-            ax = axes[0]
-            ax.imshow(image_np)
-            ax.axis("off")
-            ax.set_title("Image")
-
-            # Plot the mask
-            ax = axes[1]
-            ax.imshow(mask, cmap="viridis", vmin=0, vmax=mask.max().item())
-            ax.axis("off")  # Turn off axis
-            ax.set_title("Masks")  # Title with mask number
-
-            # Plot the second image with annotations
-            ax = axes[2]
-            ax.imshow(image_np)
-            colors = show_anns(results)  # Get colors used for masks
-            for ann, color in zip(results, colors):
-                show_box(ann["bbox"], ax, color=color, label=str(ann["category_id"]), confidence_score=ann["score"])
-            ax.axis("off")
-            ax.set_title("Image with Annotations")
-
-            # Display all the plots
-            plt.tight_layout()
-            plt.show()
 
         return results, mask
 
