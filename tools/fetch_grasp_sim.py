@@ -421,8 +421,6 @@ def do_motion_planning():
                 move_arm_to_dropoff(group, RT_gripper, x_final=0.78)
                 if gripper.is_fully_closed() or gripper.is_fully_open():
                     print("Gripper fully open/closed (after Moving)....")
-                    # TODO: LOG Moving failure to log file
-                    print("Gripper fully open/closed (after Moving).... ")
                 print(f"{obj_name} successfully droppedoff")
 
         # ------------------------ OPEN GRIPPER & STOW ---------------------#
@@ -430,14 +428,16 @@ def do_motion_planning():
         gripper.open()
         print("STOWING THE GRIPPER")
         reset_arm_stow(group)
-        input("proceed next ?")
-        input("proceed next ?")
-        input("proceed next ?")
 
-    # Clear Planning Scene
-    scene.clear()
-    rospy.sleep(1.0)
-    scene.remove_world_object()
+        # Clear Planning Scene
+        scene.clear()
+        rospy.sleep(1.0)
+        scene.remove_world_object()
+
+        for i in range(3):
+            x = input("proceed next ?").lower()
+            if x == "n":
+                sys.exit(1)
 
 
 if __name__ == "__main__":

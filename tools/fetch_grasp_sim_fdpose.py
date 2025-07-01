@@ -18,7 +18,7 @@ import tf2_ros
 from tf.transformations import quaternion_matrix
 
 from fetch_grasp.grippers import FetchGripper
-from fetch_grasp.utils import PROJECT_ROOT
+from fetch_grasp.utils import PROJECT_ROOT, OBJECT_CLASSES
 from fetch_grasp.utils.commons import draw_image_overlay, extract_masks_from_labels, draw_annotated_image
 from fetch_grasp.utils.scene import ObjectService, SceneMaker
 from fetch_grasp.utils.control import PointHeadClient, FollowTrajectoryClient
@@ -36,7 +36,7 @@ from fetch_grasp.utils.ros import ros_pose_to_rt, rt_to_ros_qt, rt_to_ros_pose
 from fetch_grasp.utils.stow_or_tuck_arm import reset_arm_stow
 from fetch_grasp.rendering import OffscreenRenderer
 
-Z_OFFSET = -0.03  # difference between Real World and Gazebo table
+Z_OFFSET = -0.05  # difference between Real World and Gazebo table
 TABLE_HEIGHT = 0.78 + Z_OFFSET
 
 MODEL_NAMES = [
@@ -47,38 +47,14 @@ MODEL_NAMES = [
     # "008_pudding_box",
     # "009_gelatin_box",
     # "010_potted_meat_can",
-    "011_banana",
-    # "021_bleach_cleanser",
+    # "011_banana",
+    "021_bleach_cleanser",
     # "024_bowl",
     # "025_mug",
-    "035_power_drill",
+    # "035_power_drill",
     # "037_scissors",
     # "040_large_marker",
     # "052_extra_large_clamp",
-]
-OBJECT_CLASSES = [
-    "background",
-    "002_master_chef_can",
-    "003_cracker_box",
-    "004_sugar_box",
-    "005_tomato_soup_can",
-    "006_mustard_bottle",
-    "007_tuna_fish_can",
-    "008_pudding_box",
-    "009_gelatin_box",
-    "010_potted_meat_can",
-    "011_banana",
-    "019_pitcher_base",
-    "021_bleach_cleanser",
-    "024_bowl",
-    "025_mug",
-    "035_power_drill",
-    "036_wood_block",
-    "037_scissors",
-    "040_large_marker",
-    "051_large_clamp",
-    "052_extra_large_clamp",
-    "061_foam_brick",
 ]
 
 
@@ -361,6 +337,9 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
     # add objects
     for obj_name in object_names:
         RT_obj = get_pose(obj_name, pose_method)
+        if RT_obj is None:
+            print(f"Failed to get pose for {obj_name}. Skipping...")
+            continue
         p.pose = rt_to_ros_pose(p.pose, RT_obj)
         obj_mesh_path = models_dir / obj_name / "textured_simple.obj"
         scene.add_mesh(obj_name, p, f"{obj_mesh_path}")
@@ -409,6 +388,10 @@ def do_motion_planning():
 
         # get the object pose in robot base frame
         RT_obj = get_pose(obj_name, pose_method)
+
+        if RT_obj is None:
+            print(f"Failed to get pose for {obj_name}. Skipping...")
+            continue
 
         direct_topdown = False
         if not direct_topdown:
@@ -493,14 +476,16 @@ def do_motion_planning():
         print("STOWING THE GRIPPER")
         reset_arm_stow(group)
         target_object_names.remove(obj_name)  # remove the object from the target list
-        input("proceed next ?")
-        input("proceed next ?")
-        input("proceed next ?")
 
-    # Clear Planning Scene
-    scene.clear()
-    rospy.sleep(1.0)
-    scene.remove_world_object()
+        # Clear Planning Scene
+        scene.clear()
+        rospy.sleep(1.0)
+        scene.remove_world_object()
+
+        for i in range(3):
+            x = input("proceed next ?").lower()
+            if x == "n":
+                sys.exit(1)
 
 
 def get_camera_K(caminfo_topic):
@@ -587,7 +572,8 @@ if __name__ == "__main__":
     grasp_dir = PROJECT_ROOT / "datasets/grasp_data/refined_grasps"
     stable_pose_file = PROJECT_ROOT / "datasets/pose_data/selected_poses.pk"
     grid_r = 2
-    grid_c = 2
+    grid_c = 3
+
     grid_size = (grid_r, grid_c)
     table_position = [0.8, 0, Z_OFFSET]
 
@@ -606,6 +592,7 @@ if __name__ == "__main__":
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     nids_vis_pub = rospy.Publisher("/fdpose/nids_vis", Image, queue_size=1)
     pose_vis_pub = rospy.Publisher("/fdpose/pose_vis", Image, queue_size=1)
+    cam_K, im_height, im_width = get_camera_K(caminfo_topic)
 
     # ---------- Create services ----------
     objs = ObjectService(models_base_path=models_dir)
@@ -634,7 +621,6 @@ if __name__ == "__main__":
         rospy.loginfo("Initializing FoundationPose and NIDS-Net...")
         nids_mod = initialize_nidsnet()
         estimator = initialize_fdpose()
-        cam_K, im_height, im_width = get_camera_K(caminfo_topic)
         # Preload object meshes
         object_meshes = {
             model_name: trimesh.load_mesh(f"{models_dir}/{model_name}/textured_simple.obj")
@@ -672,5 +658,3 @@ if __name__ == "__main__":
             print(f"An error occurred: {e}")
             rospy.logerr(f"An error occurred: {e}")
             break
-    # Cleanup the scene in Gazebo
-    cleanup_scene(object_names)

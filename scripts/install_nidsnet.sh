@@ -14,7 +14,7 @@ fi
 
 # Install Python dependencies for NIDS-Net
 log_message "Installing xformers 0.0.23..."
-if "${PYTHON_PATH}" -m pip install --quiet --no-cache-dir "xformers==0.0.23"; then
+if "${PYTHON_PATH}" -m pip install --quiet --no-cache-dir "xformers==0.0.23" --index-url https://download.pytorch.org/whl/cu118; then
   log_message "xformers installed successfully."
 else
   handle_error "Failed to install xformers."

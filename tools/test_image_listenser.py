@@ -6,27 +6,13 @@ import rospy
 import ros_numpy
 from sensor_msgs.msg import Image
 
-from fetch_grasp.utils import PROJECT_ROOT
-from fetch_grasp.utils.commons import (
-    extract_masks_from_labels,
-    draw_annotated_image,
-    draw_image_overlay,
-    write_rgb_image,
-)
+from fetch_grasp.utils import PROJECT_ROOT, OBJECT_CLASSES
+from fetch_grasp.utils.commons import extract_masks_from_labels, draw_annotated_image, draw_image_overlay
 from fetch_grasp.utils.image_listener import FetchImageListener
 from fetch_grasp.rendering import OffscreenRenderer
 
 MODEL_NAMES = [
     "003_cracker_box",
-    "006_mustard_bottle",
-    "011_banana",
-    "035_power_drill",
-]
-OBJECT_CLASSES = [
-    "background",
-    "002_master_chef_can",
-    "003_cracker_box",
-    "004_sugar_box",
     "005_tomato_soup_can",
     "006_mustard_bottle",
     "007_tuna_fish_can",
@@ -34,17 +20,13 @@ OBJECT_CLASSES = [
     "009_gelatin_box",
     "010_potted_meat_can",
     "011_banana",
-    "019_pitcher_base",
     "021_bleach_cleanser",
     "024_bowl",
     "025_mug",
     "035_power_drill",
-    "036_wood_block",
     "037_scissors",
     "040_large_marker",
-    "051_large_clamp",
     "052_extra_large_clamp",
-    "061_foam_brick",
 ]
 
 
