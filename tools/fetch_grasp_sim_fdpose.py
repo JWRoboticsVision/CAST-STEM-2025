@@ -1,8 +1,15 @@
 import copy
 import sys
 import numpy as np
+import cv2
+import torch
+import trimesh
 
+# ROS imports
+import ros_numpy
 import rospy
+from sensor_msgs.msg import Image, CameraInfo
+from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PoseStamped, Pose
 from gazebo_msgs.srv import GetModelState
 import moveit_commander
@@ -11,7 +18,8 @@ import tf2_ros
 from tf.transformations import quaternion_matrix
 
 from fetch_grasp.grippers import FetchGripper
-from fetch_grasp.utils import PROJECT_ROOT
+from fetch_grasp.utils import PROJECT_ROOT, OBJECT_CLASSES
+from fetch_grasp.utils.commons import draw_image_overlay, extract_masks_from_labels, draw_annotated_image
 from fetch_grasp.utils.scene import ObjectService, SceneMaker
 from fetch_grasp.utils.control import PointHeadClient, FollowTrajectoryClient
 from fetch_grasp.utils.grasp import (
@@ -26,8 +34,9 @@ from fetch_grasp.utils.grasp import (
 )
 from fetch_grasp.utils.ros import ros_pose_to_rt, rt_to_ros_qt, rt_to_ros_pose
 from fetch_grasp.utils.stow_or_tuck_arm import reset_arm_stow
+from fetch_grasp.rendering import OffscreenRenderer
 
-Z_OFFSET = -0.03  # difference between Real World and Gazebo table
+Z_OFFSET = -0.05  # difference between Real World and Gazebo table
 TABLE_HEIGHT = 0.78 + Z_OFFSET
 
 MODEL_NAMES = [
@@ -39,10 +48,10 @@ MODEL_NAMES = [
     # "009_gelatin_box",
     # "010_potted_meat_can",
     # "011_banana",
-    # "021_bleach_cleanser",
+    "021_bleach_cleanser",
     # "024_bowl",
     # "025_mug",
-    "035_power_drill",
+    # "035_power_drill",
     # "037_scissors",
     # "040_large_marker",
     # "052_extra_large_clamp",
@@ -178,7 +187,34 @@ def get_pose_gazebo(model_name, relative_entity_name=""):
 
 
 def get_pose_fdpose(object_name):
-    pass
+    obj_mesh = object_meshes[object_name]
+    while True:
+        rgb = get_image_by_topic(color_topic, message_type=Image)
+        depth = get_image_by_topic(depth_opic, message_type=Image)
+        cam_RT = get_tf_pose(tf_buffer, camera_frame, base_frame)
+        if rgb is not None and depth is not None and cam_RT is not None:
+            break
+    masks, obj_names, labels, labels_vis = run_nidsnet_once(nids_mod, rgb)
+    nids_vis_pub.publish(ros_numpy.msgify(Image, labels_vis, encoding="rgb8"))
+    if object_name not in obj_names:
+        print(f"Object {object_name} not found in NIDS-Net output.")
+        return None
+    mask = masks[obj_names.index(object_name)]  # get the mask for the object
+    ob_in_cam = run_fdpose_register_once(estimator, obj_mesh, rgb, depth, mask, cam_K)
+    obj_RT = np.matmul(cam_RT, ob_in_cam)  # object pose in base frame
+
+    r_colors = renderer.get_render_colors(
+        width=rgb.shape[1],
+        height=rgb.shape[0],
+        cam_names=["camera"],
+        cam_poses=[np.eye(4)],
+        mesh_names=[object_name],
+        mesh_poses=[ob_in_cam],
+    )
+    poses_vis = draw_image_overlay(rgb, r_colors[0], 0.65)
+    pose_vis_pub.publish(ros_numpy.msgify(Image, poses_vis, encoding="rgb8"))
+
+    return obj_RT
 
 
 def grasp_with_rt(gripper, group, scene, object_name, display_trajectory_publisher, RT_grasp):
@@ -301,6 +337,9 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
     # add objects
     for obj_name in object_names:
         RT_obj = get_pose(obj_name, pose_method)
+        if RT_obj is None:
+            print(f"Failed to get pose for {obj_name}. Skipping...")
+            continue
         p.pose = rt_to_ros_pose(p.pose, RT_obj)
         obj_mesh_path = models_dir / obj_name / "textured_simple.obj"
         scene.add_mesh(obj_name, p, f"{obj_mesh_path}")
@@ -338,15 +377,21 @@ def cleanup_scene(scene_objects):
 
 def do_motion_planning():
     # ---------- Setup the planning scene ----------
-    rospy.loginfo("Setting up the planning scene...")
+
+    target_object_names = [n for n in object_names]
     for obj_idx, obj_name in enumerate(object_names):
         print("=" * 5 + f" Start Motion Planning for {obj_name} " + "=" * 5)
         grasp_num, trajectory_standoff, trajectory_final = None, None, None
         gripper.open()
-        setup_planning_scene(scene, object_names, pose_method)
+        rospy.loginfo("** Setting up the planning scene...")
+        setup_planning_scene(scene, target_object_names, pose_method)
 
         # get the object pose in robot base frame
         RT_obj = get_pose(obj_name, pose_method)
+
+        if RT_obj is None:
+            print(f"Failed to get pose for {obj_name}. Skipping...")
+            continue
 
         direct_topdown = False
         if not direct_topdown:
@@ -405,7 +450,7 @@ def do_motion_planning():
         else:
             print("Trying to lift object")
             RT_gripper = get_gripper_rt(tf_buffer)
-            print("RT_gripper before lifting", RT_gripper)
+            print("RT_gripper before lifting\n", RT_gripper)
             lift_arm_cartesian(group, RT_gripper)
 
             # ----------------------- MOVING OBJECT ------------------------#
@@ -417,10 +462,12 @@ def do_motion_planning():
                 RT_gripper = get_gripper_rt(tf_buffer)
                 rotate_gripper(group, RT_gripper)
                 RT_gripper = get_gripper_rt(tf_buffer)
-                print("RT_gripper after lift", RT_gripper)
+                print("RT_gripper after lift\n", RT_gripper)
                 move_arm_to_dropoff(group, RT_gripper, x_final=0.78)
                 if gripper.is_fully_closed() or gripper.is_fully_open():
                     print("Gripper fully open/closed (after Moving)....")
+                    # TODO: LOG Moving failure to log file
+                    print("Gripper fully open/closed (after Moving).... ")
                 print(f"{obj_name} successfully droppedoff")
 
         # ------------------------ OPEN GRIPPER & STOW ---------------------#
@@ -428,6 +475,7 @@ def do_motion_planning():
         gripper.open()
         print("STOWING THE GRIPPER")
         reset_arm_stow(group)
+        target_object_names.remove(obj_name)  # remove the object from the target list
 
         # Clear Planning Scene
         scene.clear()
@@ -440,20 +488,111 @@ def do_motion_planning():
                 sys.exit(1)
 
 
+def get_camera_K(caminfo_topic):
+    camInfo_msg = rospy.wait_for_message(caminfo_topic, CameraInfo)
+    cam_model = PinholeCameraModel()
+    cam_model.fromCameraInfo(camInfo_msg)
+    K = cam_model.intrinsicMatrix().astype("float32")
+    img_height, img_width = cam_model.height, cam_model.width
+
+    return K, img_height, img_width
+
+
+def get_image_by_topic(image_topic, message_type=Image):
+    image_msg = rospy.wait_for_message(image_topic, message_type)
+    img = ros_numpy.numpify(image_msg)
+    if image_msg.encoding == "rgb8":
+        pass
+    elif image_msg.encoding == "bgr8":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    elif image_msg.encoding == "32FC1":
+        pass
+    elif image_msg.encoding == "16UC1":
+        img = img.astype(np.float32) / 1000.0  # Convert to meters if depth
+    else:
+        raise ValueError(f"Unsupported image encoding: {image_msg.encoding}")
+    return img
+
+
+def run_nidsnet_once(nids_mod, image_rgb):
+    _, labels = nids_mod.step(image_rgb.copy())
+    labels = labels.cpu().numpy().astype(np.uint8)
+    masks = extract_masks_from_labels(labels)
+    obj_names = [OBJECT_CLASSES[int(i)] for i in np.unique(labels) if i != 0]
+    labels_vis = draw_annotated_image(image_rgb, masks=masks, labels=obj_names)
+    return masks, obj_names, labels, labels_vis
+
+
+def run_fdpose_register_once(est, obj_mesh, rgb, depth, mask, K):
+    # Reset object mesh
+    est.reset_object(model_pts=obj_mesh.vertices.copy(), model_normals=obj_mesh.vertex_normals.copy(), mesh=obj_mesh)
+    # Run pose estimation with register mode
+    ob_in_cam_mat = est.register(rgb=rgb.copy(), depth=depth.copy(), ob_mask=mask, K=K, iteration=15)
+    return ob_in_cam_mat
+
+
+def initialize_fdpose():
+    from fetch_grasp.wrappers.foundationpose import FoundationPose, ScorePredictor, PoseRefinePredictor, set_seed, dr
+
+    set_seed(0)
+
+    print("Initializing FoundationPose...")
+
+    # Create a dummy mesh from box primitive mesh
+    m_box = trimesh.primitives.Box()
+    dummy_mesh = trimesh.Trimesh(vertices=m_box.vertices, faces=m_box.faces, vertex_normals=m_box.vertex_normals)
+
+    estimator = FoundationPose(
+        model_pts=dummy_mesh.vertices.astype(np.float32),
+        model_normals=dummy_mesh.vertex_normals.astype(np.float32),
+        mesh=dummy_mesh,
+        scorer=ScorePredictor(),
+        refiner=PoseRefinePredictor(),
+        glctx=dr.RasterizeCudaContext(),
+        rotation_grid_min_n_views=120,
+        rotation_grid_inplane_step=60,
+    )
+
+    return estimator
+
+
+def initialize_nidsnet():
+    from fetch_grasp.wrappers.nidsnet import NIDS, feat_dict, weight_adapter_path
+
+    print("Initializing NIDS-Net...")
+    object_features = torch.Tensor(feat_dict["features"]).view(-1, 42, 1024).cuda()
+    model = NIDS(template_features=object_features, use_adapter=True, adapter_path=weight_adapter_path)
+
+    return model
+
+
 if __name__ == "__main__":
-    pose_method = "gazebo"  # gazebo, fdpose
+    pose_method = "fdpose"  # gazebo, fdpose
     models_dir = PROJECT_ROOT / "datasets/models"
     grasp_dir = PROJECT_ROOT / "datasets/grasp_data/refined_grasps"
     stable_pose_file = PROJECT_ROOT / "datasets/pose_data/selected_poses.pk"
     grid_r = 2
-    grid_c = 2
+    grid_c = 3
+
     grid_size = (grid_r, grid_c)
     table_position = [0.8, 0, Z_OFFSET]
+
+    # Define topics
+    color_topic = "/head_camera/rgb/image_raw"
+    depth_opic = "/head_camera/depth_registered/image_raw"
+    caminfo_topic = "/head_camera/rgb/camera_info"
+
+    # Define frames for tf pose queries
+    base_frame = "base_link"
+    camera_frame = "head_camera_rgb_optical_frame"
 
     # ---------- Create a node ----------
     rospy.init_node("GazeboSceneGenerator")
     tf_buffer = tf2_ros.Buffer(rospy.Duration(100.0))  # tf buffer length
     tf_listener = tf2_ros.TransformListener(tf_buffer)
+    nids_vis_pub = rospy.Publisher("/fdpose/nids_vis", Image, queue_size=1)
+    pose_vis_pub = rospy.Publisher("/fdpose/pose_vis", Image, queue_size=1)
+    cam_K, im_height, im_width = get_camera_K(caminfo_topic)
 
     # ---------- Create services ----------
     objs = ObjectService(models_base_path=models_dir)
@@ -477,6 +616,21 @@ if __name__ == "__main__":
     )
     gripper = FetchGripper(group_grp)
 
+    # ---------- initialize FoundationPose and NIDS-Net ----------
+    if pose_method == "fdpose":
+        rospy.loginfo("Initializing FoundationPose and NIDS-Net...")
+        nids_mod = initialize_nidsnet()
+        estimator = initialize_fdpose()
+        # Preload object meshes
+        object_meshes = {
+            model_name: trimesh.load_mesh(f"{models_dir}/{model_name}/textured_simple.obj")
+            for model_name in MODEL_NAMES
+        }
+        renderer = OffscreenRenderer(znear=0.1, zfar=100.0)
+        renderer.add_camera(cam_K, "camera")
+        for obj_name, obj_mesh in object_meshes.items():
+            renderer.add_mesh(obj_mesh, obj_name)
+
     # Raise the torso
     rospy.loginfo("Raising torso...")
     torso_action.move_to([0.4])
@@ -489,11 +643,18 @@ if __name__ == "__main__":
         head_action = FollowTrajectoryClient("head_controller", ["head_pan_joint", "head_tilt_joint"])
         head_action.move_to([0.009195, 0.908270])
 
-    # Create Scene in Gazebo
-    sample_scene, object_names = create_scene()
+    while not rospy.is_shutdown():
+        try:
+            # Create Scene in Gazebo and add objects
+            sample_scene, object_names = create_scene()
 
-    # Setup the planning scene
-    do_motion_planning()
+            # Setup the planning scene
+            do_motion_planning()
 
-    # Clean up the scene in Gazebo
-    cleanup_scene(object_names)
+        except rospy.ROSInterruptException:
+            print("ROS Interrupt Exception caught. Exiting...")
+            break
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            rospy.logerr(f"An error occurred: {e}")
+            break

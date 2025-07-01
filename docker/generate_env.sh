@@ -33,8 +33,11 @@ x-default-user-volumes: &default-user-volumes
     source: ${PROJ_ROOT}/docker/ros/.ros
     target: /home/${USER_NAME}/.ros
   - type: bind
-    source: ${PROJ_ROOT}/docker/ros/.gazebo
+    source: ${PROJ_ROOT}/docker/volumes/gazebo
     target: /home/${USER_NAME}/.gazebo
+  - type: bind
+    source: ${PROJ_ROOT}/docker/volumes/cache
+    target: /home/${USER_NAME}/.cache
 
 x-default-base-environment: &default-base-environment
   DISPLAY: ${DISPLAY}

@@ -12,9 +12,7 @@ import torch
 from fetch_grasp.utils import PROJECT_ROOT
 from fetch_grasp.utils.commons import (
     draw_annotated_image,
-    read_rgb_image,
     write_rgb_image,
-    write_depth_image,
     write_mask_image,
     write_data_to_yaml,
 )
