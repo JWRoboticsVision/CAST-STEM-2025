@@ -1,4 +1,6 @@
 <launch>
+
+  <!-- To use simulation time -->
   <rosparam>
     <param name="/use_sim_time" value="true" />
   </rosparam>
@@ -21,6 +23,7 @@
   <group if="$(eval arg('robot') == 'fetch_UMI')">
     <param name="robot_description" textfile="$(arg urdf_file_UMI)" />
   </group>
+
 
   <!-- Launch MoveIt! move_group -->
   <include file="$(find fetch_moveit_config)/launch/move_group.launch">

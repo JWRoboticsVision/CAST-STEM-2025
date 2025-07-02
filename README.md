@@ -12,17 +12,17 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
 
 ---
 
-## News
+## Main Referred Methods
 
-- **2025-06-11**:
-  - added the FoundationPose installation script.
-- **2025-06-10**:
-  - added the Docker environment setup.
+- **Object 6D Pose Estimation:** [FoundationPose](https://github.com/NVlabs/FoundationPose)
+- **Object Segmentation:** [NIDS-Net](https://github.com/IRVLUTD/NIDS-Net)
+- **Fetch Robot ROS Components for IRVL Lab:** [fetch_ros_IRVL](https://github.com/IRVLUTD/fetch_ros_IRVL)
+- **Sim & Real Grasping Scene Generation & Implementation:** [SceneReplica](https://github.com/IRVLUTD/SceneReplica)
 
 ## Contents
 
 - [CAST-STEM 2025 Summer Camp Project](#cast-stem-2025-summer-camp-project)
-  - [News](#news)
+  - [Main Referred Methods](#main-referred-methods)
   - [Contents](#contents)
   - [Prerequisites](#prerequisites)
       - [1. Git](#1-git)
@@ -31,21 +31,27 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
   - [Environment Setup (Docker)](#environment-setup-docker)
       - [1. Clone the Repository](#1-clone-the-repository)
       - [2. Build the Docker Image](#2-build-the-docker-image)
-      - [3. Run the Docker Container](#3-run-the-docker-container)
-        - [3.1 Compile the ROS Workspace (if you have not done so)](#31-compile-the-ros-workspace-if-you-have-not-done-so)
-        - [3.2 Setup the Conda Environment](#32-setup-the-conda-environment)
-          - [3.2.1 Install the fetch\_grasp package](#321-install-the-fetch_grasp-package)
-          - [3.2.2 Install FoundationPose:](#322-install-foundationpose)
+      - [3. Run and Enter the Docker Container](#3-run-and-enter-the-docker-container)
+      - [4. Setup the Environment in the Docker Container](#4-setup-the-environment-in-the-docker-container)
+        - [4.1 Compile the ROS Workspace (if you have not done so)](#41-compile-the-ros-workspace-if-you-have-not-done-so)
+        - [4.2 Setup the Conda Environment](#42-setup-the-conda-environment)
+          - [4.2.1 Create the conda environment:](#421-create-the-conda-environment)
+          - [4.2.2 Install the fetch\_grasp package](#422-install-the-fetch_grasp-package)
+          - [4.2.3 Install FoundationPose:](#423-install-foundationpose)
           - [3.2.3 Install NIDS-Net](#323-install-nids-net)
-        - [3.3 Download the Datasets](#33-download-the-datasets)
-          - [3.2.1 Link the models to the Gazebo model path in the Docker container:](#321-link-the-models-to-the-gazebo-model-path-in-the-docker-container)
+        - [4.3 Download the Datasets](#43-download-the-datasets)
+        - [4.4 Create a Symbolic Link for the Models](#44-create-a-symbolic-link-for-the-models)
   - [Example Usage](#example-usage)
       - [1. Run, Enter and Stop the Docker container:](#1-run-enter-and-stop-the-docker-container)
-      - [2. Run the SAM2 Segmentation](#2-run-the-sam2-segmentation)
+      - [2. Run the SAM2 Segmentation (Mannual Segmentation)](#2-run-the-sam2-segmentation-mannual-segmentation)
       - [3. Run the NIDS-Net Segmentation](#3-run-the-nids-net-segmentation)
       - [4. Run the FoundationPose](#4-run-the-foundationpose)
       - [5. Run the FoundationPose on NIDS-Net Segmentation Results](#5-run-the-foundationpose-on-nids-net-segmentation-results)
-      - [6. Run the Fetch Grasping in Gazebo Simulation](#6-run-the-fetch-grasping-in-gazebo-simulation)
+      - [6. Run the Demos in Gazebo Simulation](#6-run-the-demos-in-gazebo-simulation)
+        - [6.1 Prepare the Fetch Gazebo Simulation](#61-prepare-the-fetch-gazebo-simulation)
+        - [6.2 Terminal 5: Run the Fetch Grasping Simulation](#62-terminal-5-run-the-fetch-grasping-simulation)
+        - [6.3 Terminal 5: Run the Fetch Grasping Simulation with NIDS-Net and FoundationPose](#63-terminal-5-run-the-fetch-grasping-simulation-with-nids-net-and-foundationpose)
+        - [6.4 Terminal 5: Run the Image\_Listener](#64-terminal-5-run-the-image_listener)
   - [Project Schedule](#project-schedule)
     - [Week 1: Basic Knowledge Preparation](#week-1-basic-knowledge-preparation)
       - [1. Slides](#1-slides)
@@ -63,23 +69,29 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [2. Get RGBD Images and CameraInfo from ROS topics](#2-get-rgbd-images-and-camerainfo-from-ros-topics)
       - [3. Run FoundationPose on the Saved RGBD Images](#3-run-foundationpose-on-the-saved-rgbd-images)
       - [4. NIDS-Net: Run Segmentation on the Published RGB Image](#4-nids-net-run-segmentation-on-the-published-rgb-image)
+    - [Week 5: Run Grasping on Real Fetch Robot](#week-5-run-grasping-on-real-fetch-robot)
+      - [On Fetch Desktop](#on-fetch-desktop)
+        - [1.1 Make the Fetch Desktop ROS work as a ROS client](#11-make-the-fetch-desktop-ros-work-as-a-ros-client)
+        - [1.2 Adjust the Fetch Robot for Safe Grasping](#12-adjust-the-fetch-robot-for-safe-grasping)
+        - [1.4 Place the target objects (e.g., YCB Cracker) on the table.](#14-place-the-target-objects-eg-ycb-cracker-on-the-table)
+        - [1.3 Run the Grasping on the Real Fetch Robot](#13-run-the-grasping-on-the-real-fetch-robot)
 
 ## Prerequisites
 
 #### 1. Git
 
-- For Linux:
+- **Linux/Unix:**
 
 ```bash
 sudo apt-get install git
 ```
 
-- For Windows:
+- **Windows:**
 
   - Option One: [Github Desktop](https://desktop.github.com/).
   - Option Two: [Git for Windows](https://gitforwindows.org/).
 
-- For MacOS:
+- **MacOS:**
 
   - Option One: [Github Desktop](https://desktop.github.com/).
   - Option Two: [Homebrew](https://brew.sh/).
@@ -91,7 +103,7 @@ Please refer to the official instruction [Installing Miniconda](https://docs.ana
 #### 3. Code Editor (Visual Studio Code for example)
 
 - You could install the Visual Studio Code (VSCode) from the [official website](https://code.visualstudio.com/).
-- Once you have installed the VSCode, you could install below extensions:
+- Recommended extensions for Python development in VSCode:
   - [Python](https://marketplace.visualstudio.com/items?itemName=ms-python.python)
   - [Pylance](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance)
   - [Python Debugger](https://marketplace.visualstudio.com/items?itemName=ms-python.debugpy)
@@ -99,16 +111,11 @@ Please refer to the official instruction [Installing Miniconda](https://docs.ana
 
 ## Environment Setup (Docker)
 
-If you prefer to use Docker, you can set up the environment using the provided Dockerfile. This allows you to run the project in a containerized environment.
-
 #### 1. Clone the Repository
 
 ```bash
-# Clone the repository
-git clone https://github.com/JWRoboticsVision/CAST-STEM-2025.git
-
-# Go to the project directory
-cd CAST-STEM-2025
+# Clone the repository and enter the project directory
+git clone https://github.com/JWRoboticsVision/CAST-STEM-2025.git && cd CAST-STEM-2025
 ```
 
 #### 2. Build the Docker Image
@@ -118,30 +125,44 @@ Follow below instructions to build the Docker image based on your operating syst
 - For Linux, follow the [Linux Installation Guide](./docs/container_installation_linux.md).
 - For Windows, follow the [Windows Installation Guide](./docs/container_installation_windows.md).
 
-#### 3. Run the Docker Container
+#### 3. Run and Enter the Docker Container
 
-- Run and enter the container:
+- Run the ros1-base container
 
 ```bash
-# Run the ros1-base container
 bash ./docker/container_handler.sh run
+```
 
-# Enter the container
+- Enter the container
+
+```bash
 bash ./docker/container_handler.sh enter
 ```
 
-##### 3.1 Compile the ROS Workspace (if you have not done so)
+#### 4. Setup the Environment in the Docker Container
+
+##### 4.1 Compile the ROS Workspace (if you have not done so)
+
+- Make sure you are not in the conda environment
 
 ```bash
-# Make sure you are not in the conda environment
 conda deactivate
-# Update rosdeps
+```
+
+- Update rosdeps
+
+```bash
 rosdep update --rosdistro=$ROS_DISTRO
+```
+
+- Download the ROS packages and compile the workspace
+
+```bash
 # Go to the catkin workspace
 mkdir -p ~/catkin_ws/src && cd ~/catkin_ws/src
 
 # Fetch Robot ROS package
-git clone -b ros1 https://github.com/ZebraDevs/fetch_ros.git
+git clone -b ros1 https://github.com/IRVLUTD/fetch_ros_IRVL.git
 # Fetch Gazebo Simulator
 git clone -b gazebo11 https://github.com/ZebraDevs/fetch_gazebo.git
 # Clone the urdf_tutorial
@@ -151,27 +172,31 @@ git clone -b ros1 https://github.com/ros/urdf_tutorial.git
 cd ~/catkin_ws && catkin_make -j$(nproc) -DPYTHON_EXECUTABLE=/usr/bin/python3
 ```
 
-- Verify the workspace
+- Replace below files to make the Gazebo simulation load the Fetch robot URDF model correctly from the `fetch_ros_IRVL` package.
+
+  - `fetch.gazebo.xacro` for `fetch_gazebo` package
 
 ```bash
-roslaunch urdf_tutorial display.launch  model:=${HOME}/catkin_ws/src/fetch_ros/fetch_description/robots/fetch.urdf
+cp ~/code/docker/config/fetch.gazebo.xacro ~/catkin_ws/src/fetch_gazebo/fetch_gazebo/robots/
 ```
 
-##### 3.2 Setup the Conda Environment
+##### 4.2 Setup the Conda Environment
 
-- Create the conda environment in the code directory:
+###### 4.2.1 Create the conda environment:
 
 The following commands will create a conda environment in the `~/code/.env` directory and activate it. This is useful for keeping the environment isolated and organized within the project directory.
 
 ```bash
 # Go to the code directory
 cd ~/code
-# Create and activate the conda environment
+# Create the conda environment
 conda create --prefix $PWD/.env python=3.11 libffi=3.4 pyside2=5.15 -y
+
+# Activate the conda environment
 conda activate $PWD/.env
 ```
 
-###### 3.2.1 Install the fetch_grasp package
+###### 4.2.2 Install the fetch_grasp package
 
 - Install the PyTorch 2.1.1
 
@@ -197,9 +222,9 @@ python -m pip install -e source/fetch_grasp --no-cache-dir
 wget https://github.com/ultralytics/assets/releases/download/v8.3.0/sam2.1_t.pt -O ./checkpoints/sam2.1_t.pt
 ```
 
-###### 3.2.2 Install FoundationPose:
+###### 4.2.3 Install FoundationPose:
 
-Download the FoundationPose zip file from [box](https://utdallas.box.com/s/mmg01ce4stg1txoauovy7j36fa2mbwsi) and extract it to the `./third-party` directory.
+Download the `FoundationPose.zip` file from [box](https://utdallas.box.com/s/mmg01ce4stg1txoauovy7j36fa2mbwsi) and extract it to the `./third-party` directory.
 
 ```bash
 bash scripts/install_foundationpose.sh
@@ -207,29 +232,35 @@ bash scripts/install_foundationpose.sh
 
 ###### 3.2.3 Install NIDS-Net
 
-Download the NIDS-Net zip file from [box](https://utdallas.box.com/s/l90nf1e2luem7rtlf52g1lzwrh9uh19d) and extract it to the `./third-party` directory.
+Download the `NIDS-Net.zip` file from [box](https://utdallas.box.com/s/l90nf1e2luem7rtlf52g1lzwrh9uh19d) and extract it to the `./third-party` directory.
 
 ```bash
 bash scripts/install_nidsnet.sh
 ```
 
-##### 3.3 Download the Datasets
+##### 4.3 Download the Datasets
 
 Download the zip files from [box](https://utdallas.box.com/s/affmfpptc04qkmyb532atjrqn5q9d53g) and extract them to the `~/code/datasets` directory. The datasets directory should look like this:
 
 ```
 ./datasets
-├── demo
 ├── final_scenes
 ├── grasp_data
 ├── models
 ├── pose_data
 ```
 
-###### 3.2.1 Link the models to the Gazebo model path in the Docker container:
+##### 4.4 Create a Symbolic Link for the Models
+
+To load the models properly in Gazebo, we need to create a symbolic link for the models directory in the Gazebo model path. This allows Gazebo to find the models when launching the simulation.
 
 ```bash
-cd ~/.gazebo && rm -rf models && ln -s ~/code/datasets/models models
+# Go to the .gazebo directory
+cd ~/.gazebo
+# Remove the existing symbolic link (if exists)
+rm -rf models
+# Create a new symbolic link to the models directory in the datasets
+ln -s ~/code/datasets/models
 ```
 
 ## Example Usage
@@ -254,9 +285,13 @@ bash docker/container_handler.sh enter
 bash docker/container_handler.sh stop
 ```
 
-#### 2. Run the SAM2 Segmentation
+#### 2. Run the SAM2 Segmentation (Mannual Segmentation)
 
-The demo script will load the color image from `./demo/ros/color_image.png` and the user could segment the image using SAM2. The segmentation results will be saved under `./demo/ros/mask_image.png`.
+The demo script will load the color image from `./demo/ros/color_image.png` and the user could segment the image using SAM2. The segmentation results will be saved under `./demo/ros`:
+
+- `mask_image_sam2.png`: the segmentation mask image.
+- `mask_image_sam2_vis.png`: the visualization of the segmentation mask.
+- `sam2_prompts.yaml`: the prompts used for segmentation.
 
 ```bash
 python ~/code/tools/test_sam2_segmentation.py
@@ -273,15 +308,26 @@ python ~/code/tools/test_sam2_segmentation.py
 
 #### 3. Run the NIDS-Net Segmentation
 
-The demo script will load the color image from `./demo/ros/color_image.png` and segment the objects in the image using NIDS-Net. The segmentation results will be saved under `./demo/ros/`.
+The demo script will load the color image from `./demo/ros/color_image.png` and segment the objects in the image using NIDS-Net. The segmentation results will be saved under `./demo/ros/`:
+
+- `mask_image_nidsnet.png`: the segmentation mask image.
+- `mask_image_nidsnet_vis.png`: the visualization of the segmentation mask.
+- `nidsnet_class_names.yaml`: the mapping of labels to class names in the segmentation mask.
 
 ```bash
-python ~/code/tools/tools/test_nidsnet.py
+python ~/code/tools/test_nidsnet.py
 ```
+
+| Color Image                               | Segmentation Mask Visual                             |
+| ----------------------------------------- | ---------------------------------------------------- |
+| ![mask](./docs/resources/color_image.png) | ![pose](./docs/resources/mask_image_nidsnet_vis.png) |
 
 #### 4. Run the FoundationPose
 
-The demo script will load the inputs from `./demo/ros/` and estimate the 6D pose of target object `035_power_drill` using FoundationPose. Results will be saved under `./demo/ros/`.
+The demo script will load the inputs from `./demo/ros/` and estimate the 6D pose of target object `035_power_drill` using FoundationPose. Results will be saved under `./demo/ros/`:
+
+- `ob_in_cam_vis.png`: the rendered pose of the object in the camera frame.
+- `ob_in_cam.txt`: the estimated 6D pose of the object in the camera frame.
 
 ```bash
 python ~/code/tools/test_foundationpose.py
@@ -293,7 +339,10 @@ python ~/code/tools/test_foundationpose.py
 
 #### 5. Run the FoundationPose on NIDS-Net Segmentation Results
 
-The demo script will load the NIDS-Net segmentation results from `./demo/ros/` and estimate the 6D pose of labeled objects in the mask. Results will be saved under `./demo/ros/`.
+The demo script will load the NIDS-Net segmentation results from `./demo/ros/` and estimate the 6D pose of labeled objects in the mask. Results will be saved under `./demo/ros/`:
+
+- `ob_in_cam_poses_vis.png`: the rendered poses of the objects in the camera frame.
+- `ob_in_cam_poses.npz`: the estimated 6D poses of the objects in the camera frame.
 
 ```bash
 python ~/code/tools/test_nidsnet_and_fdpose.py
@@ -303,7 +352,9 @@ python ~/code/tools/test_nidsnet_and_fdpose.py
 | ---------------------------------------------------- | ------------------------------------------------- |
 | ![mask](./docs/resources/mask_image_nidsnet_vis.png) | ![pose](./docs/resources/ob_in_cam_poses_vis.png) |
 
-#### 6. Run the Fetch Grasping in Gazebo Simulation
+#### 6. Run the Demos in Gazebo Simulation
+
+##### 6.1 Prepare the Fetch Gazebo Simulation
 
 - **Terminal 1:** Start the ROS master (if not already running)
 
@@ -311,7 +362,7 @@ python ~/code/tools/test_nidsnet_and_fdpose.py
 roscore
 ```
 
-- **Terminal 2:** Start the Fetch Gazebo simulation with Just Robot
+- **Terminal 2:** Start the Fetch Gazebo simulation
 
 ```bash
 roslaunch ~/code/config/launch/just_robot.launch
@@ -329,17 +380,55 @@ roslaunch ~/code/config/launch/moveit_sim.launch
 rviz -d ~/code/config/rviz/grasp_sim.rviz
 ```
 
-- **Terminal 5:** Setup the tabletop scene and do grasping
-
-The `grasp_cracker.py` script will execute below tasks:
-
-- Create the tabletop scene in Gazebo with randomly placed YCB Cracker object.
-- Setup the MoveIt PlanningScene and do motion planning for each object.
-- Once a FULL grasp is found, the Fetch robot will execute the grasping motion.
+##### 6.2 Terminal 5: Run the Fetch Grasping Simulation
 
 ```bash
-python ~/code/tools/fetch_grasp_sim.py
+python ~/code/tools/fetch_grasp_sim.py --pose_method gazebo
 ```
+
+The `fetch_grasp_sim.py` script will execute below tasks:
+
+- Lift the Fetch robot's torso and adjust the camera to look at the tabletop.
+- Create the tabletop scene in Gazebo with randomly placed YCB Cracker object.
+- Setup the MoveIt Scene and do motion planning for each object.
+- Once a `FULL grasp` is found, the Fetch robot will execute the grasping motion in below order:
+  - Reching to the target object.
+  - Grasp the object with the gripper.
+  - Move the gripper up to lift the object.
+  - Open the gripper to drop the object.
+  - Move the gripper back to the default position.
+
+![grasp_sim_demo](./docs/resources/grasp_sim_demo_8x.gif)
+
+##### 6.3 Terminal 5: Run the Fetch Grasping Simulation with NIDS-Net and FoundationPose
+
+The `fetch_grasp_sim.py` script will estimate the 6D poses of the objects using NIDS-Net and FoundationPose instead of the Gazebo simulation ground truth poses.
+
+```bash
+python ~/code/tools/fetch_grasp_sim.py --pose_method fdpose
+```
+
+![grasp_sim_demo_fdpose](./docs/resources/grasp_sim_fdpose_demo_8x.gif)
+
+##### 6.4 Terminal 5: Run the Image_Listener
+
+The `test_image_listenser.py` script will execute below tasks:
+
+- Subscribe to the color and depth images published by the Fetch Gazebo simulation.
+- Segment the objects in the color image using NIDS-Net.
+- Estimate the 6D poses of the objects using FoundationPose.
+- Publish the rendered poses and segmentation visuals via ROS topics.
+
+```bash
+# Place objects on the table in Gazebo simulation
+python ~/code/tools/create_scene_sim.py
+
+# Run the Image_Listener
+python ~/code/tools/test_image_listenser.py
+```
+
+![image_listener_demo_gazebo](./docs/resources/image_listener_demo_gazebo.png)
+![image_listener_demo_rviz](./docs/resources/image_listener_demo_rviz.png)
 
 ## Project Schedule
 
@@ -639,3 +728,70 @@ The results will be saved under `/datasets/tmp/fdpose_nidsnet_sim`.
 | Object Poses by FoundationPose                                     | Object Poses by Gazebo (GroundTruth)                           |
 | ------------------------------------------------------------------ | -------------------------------------------------------------- |
 | ![09_poses_fd](./docs/resources/09_ob_in_cam_poses_vis%20copy.png) | ![09_poses_gt](./docs/resources/09_ob_in_cam_poses_gt_vis.png) |
+
+### Week 5: Run Grasping on Real Fetch Robot
+
+<!-- #### 1. On Fetch Robot
+
+```bash
+source ~/Documents/IRVL_ws/devel/setup.bash
+roslaunch fetch_netft netft.launch
+``` -->
+
+#### On Fetch Desktop
+
+##### 1.1 Make the Fetch Desktop ROS work as a ROS client
+
+```bash
+source ~/code/docker/source_env.sh
+```
+
+In our Lab ROS environment, the Fetch robot runs as the ROS master, and the desktop computer runs as a ROS client. To ensure the desktop computer can communicate with the Fetch robot, we need to source the environment variables every time we open a new terminal. This sets the `ROS_MASTER_URI` to the Fetch robot's IP address and the `ROS_IP` to the desktop computer's IP address.
+
+The illustration of the ROS master and client relationship:
+![here](https://i0.wp.com/circuitcellar.com/wp-content/uploads/2021/06/370_Torrico_Figure_3.jpg?w=653&ssl=1)
+
+##### 1.2 Adjust the Fetch Robot for Safe Grasping
+
+- Move the Fetch robot to a safe position, such as front of the table.
+- Set the gripper to a proper position.
+- Lift the torso to a proper height.
+- Adjust the camera to look at the tabletop.
+
+##### 1.4 Place the target objects (e.g., YCB Cracker) on the table.
+
+##### 1.3 Run the Grasping on the Real Fetch Robot
+
+- **Terminal 1:** Start the ROS master (if not already running)
+
+```bash
+source ~/code/docker/source_env.sh && roscore
+```
+
+- **Terminal 2:** Start the MoveIt Planning Interface
+
+```bash
+source ~/code/docker/source_env.sh && roslaunch ~/code/config/launch/moveit_real.launch
+```
+
+- **Terminal 3:** Start Rviz
+
+```bash
+source ~/code/docker/source_env.sh && rviz -d ~/code/config/rviz/grasp_real.rviz
+```
+
+- **Terminal 4:** Run the Fetch Grasping in Real
+
+```bash
+source ~/code/docker/source_env.sh && python ~/code/tools/fetch_grasp_real.py
+```
+
+The `fetch_grasp_real.py` script to execute the grasping. The script will execute below tasks:
+
+- Lift the Fetch robot's torso and adjust the camera to look at the tabletop.
+- The NIDS-Net will detect and segment the observed objects in the color image.
+- The FoundationPose will estimate the 6D poses of the segmented objects.
+- Setup the MoveIt Scene and do motion planning for each object.
+- Once a `FULL grasp` is found, the Fetch robot will execute the planned grasping motion.
+
+![grasp_real_demo](./docs/resources/grasp_real_demo_2x.gif)
