@@ -36,25 +36,25 @@ from fetch_grasp.utils.ros import ros_pose_to_rt, rt_to_ros_qt, rt_to_ros_pose
 from fetch_grasp.utils.stow_or_tuck_arm import reset_arm_stow
 from fetch_grasp.rendering import OffscreenRenderer
 
-Z_OFFSET = -0.05  # difference between Real World and Gazebo table
+Z_OFFSET = -0.03  # difference between Real World and Gazebo table
 TABLE_HEIGHT = 0.78 + Z_OFFSET
 
 MODEL_NAMES = [
     "003_cracker_box",
-    # "005_tomato_soup_can",
-    # "006_mustard_bottle",
+    "005_tomato_soup_can",
+    "006_mustard_bottle",
     # "007_tuna_fish_can",
     # "008_pudding_box",
-    # "009_gelatin_box",
+    "009_gelatin_box",
     # "010_potted_meat_can",
-    # "011_banana",
+    "011_banana",
     "021_bleach_cleanser",
     # "024_bowl",
     # "025_mug",
-    # "035_power_drill",
+    "035_power_drill",
     # "037_scissors",
     # "040_large_marker",
-    # "052_extra_large_clamp",
+    "052_extra_large_clamp",
 ]
 
 
@@ -297,9 +297,7 @@ def grasp_with_rt(gripper, group, scene, object_name, display_trajectory_publish
 
 
 def get_gripper_rt(tf_buffer):
-    transform = tf_buffer.lookup_transform(
-        "base_link", "wrist_roll_link", rospy.Time.now(), rospy.Duration(1.0)
-    ).transform
+    transform = tf_buffer.lookup_transform("base_link", "ati_link", rospy.Time.now(), rospy.Duration(1.0)).transform
     quat = [
         transform.rotation.x,
         transform.rotation.y,
@@ -337,9 +335,6 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
     # add objects
     for obj_name in object_names:
         RT_obj = get_pose(obj_name, pose_method)
-        if RT_obj is None:
-            print(f"Failed to get pose for {obj_name}. Skipping...")
-            continue
         p.pose = rt_to_ros_pose(p.pose, RT_obj)
         obj_mesh_path = models_dir / obj_name / "textured_simple.obj"
         scene.add_mesh(obj_name, p, f"{obj_mesh_path}")
@@ -388,10 +383,6 @@ def do_motion_planning():
 
         # get the object pose in robot base frame
         RT_obj = get_pose(obj_name, pose_method)
-
-        if RT_obj is None:
-            print(f"Failed to get pose for {obj_name}. Skipping...")
-            continue
 
         direct_topdown = False
         if not direct_topdown:
@@ -476,16 +467,14 @@ def do_motion_planning():
         print("STOWING THE GRIPPER")
         reset_arm_stow(group)
         target_object_names.remove(obj_name)  # remove the object from the target list
+        input("proceed next ?")
+        input("proceed next ?")
+        input("proceed next ?")
 
-        # Clear Planning Scene
-        scene.clear()
-        rospy.sleep(1.0)
-        scene.remove_world_object()
-
-        for i in range(3):
-            x = input("proceed next ?").lower()
-            if x == "n":
-                sys.exit(1)
+    # Clear Planning Scene
+    scene.clear()
+    rospy.sleep(1.0)
+    scene.remove_world_object()
 
 
 def get_camera_K(caminfo_topic):
@@ -572,8 +561,7 @@ if __name__ == "__main__":
     grasp_dir = PROJECT_ROOT / "datasets/grasp_data/refined_grasps"
     stable_pose_file = PROJECT_ROOT / "datasets/pose_data/selected_poses.pk"
     grid_r = 2
-    grid_c = 3
-
+    grid_c = 2
     grid_size = (grid_r, grid_c)
     table_position = [0.8, 0, Z_OFFSET]
 
@@ -586,17 +574,18 @@ if __name__ == "__main__":
     base_frame = "base_link"
     camera_frame = "head_camera_rgb_optical_frame"
 
+    # import pdb; pdb.set_trace()
+
     # ---------- Create a node ----------
     rospy.init_node("GazeboSceneGenerator")
     tf_buffer = tf2_ros.Buffer(rospy.Duration(100.0))  # tf buffer length
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     nids_vis_pub = rospy.Publisher("/fdpose/nids_vis", Image, queue_size=1)
     pose_vis_pub = rospy.Publisher("/fdpose/pose_vis", Image, queue_size=1)
-    cam_K, im_height, im_width = get_camera_K(caminfo_topic)
 
     # ---------- Create services ----------
-    objs = ObjectService(models_base_path=models_dir)
-    scene_m = SceneMaker(MODEL_NAMES, models_dir, grid_size, table_position, TABLE_HEIGHT, stable_pose_file)
+    # objs = ObjectService(models_base_path=models_dir)
+    # scene_m = SceneMaker(MODEL_NAMES, models_dir, grid_size, table_position, TABLE_HEIGHT, stable_pose_file)
 
     # ---------- initialize clients for Fetch robot ----------
     torso_action = FollowTrajectoryClient("torso_controller", ["torso_lift_joint"])
@@ -605,7 +594,8 @@ if __name__ == "__main__":
     # ---------- initialize moveit components ----------
     moveit_commander.roscpp_initialize(sys.argv)
     group = moveit_commander.MoveGroupCommander("arm")
-    group.set_max_velocity_scaling_factor(1.0)
+    group.set_max_velocity_scaling_factor(0.5)
+    group.set_end_effector_link("ati_link")  # set the end effector link
     group_grp = moveit_commander.MoveGroupCommander("gripper")
     scene = moveit_commander.PlanningSceneInterface()
     robot = moveit_commander.RobotCommander()
@@ -621,6 +611,7 @@ if __name__ == "__main__":
         rospy.loginfo("Initializing FoundationPose and NIDS-Net...")
         nids_mod = initialize_nidsnet()
         estimator = initialize_fdpose()
+        cam_K, im_height, im_width = get_camera_K(caminfo_topic)
         # Preload object meshes
         object_meshes = {
             model_name: trimesh.load_mesh(f"{models_dir}/{model_name}/textured_simple.obj")
@@ -643,10 +634,24 @@ if __name__ == "__main__":
         head_action = FollowTrajectoryClient("head_controller", ["head_pan_joint", "head_tilt_joint"])
         head_action.move_to([0.009195, 0.908270])
 
+    object_names = []
+
     while not rospy.is_shutdown():
         try:
-            # Create Scene in Gazebo and add objects
-            sample_scene, object_names = create_scene()
+            while True:
+                rgb = get_image_by_topic(color_topic, message_type=Image)
+                if rgb is not None:
+                    break
+            masks, obj_names, labels, labels_vis = run_nidsnet_once(nids_mod, rgb)
+            nids_vis_pub.publish(ros_numpy.msgify(Image, labels_vis, encoding="rgb8"))
+
+            object_names = [name for name in obj_names if name in MODEL_NAMES]
+
+            if len(object_names) == 0:
+                rospy.loginfo(f"No Valid Objects found on Table!!!")
+                continue
+
+            rospy.loginfo(f"Observed Objects on Table: {object_names}")
 
             # Setup the planning scene
             do_motion_planning()
