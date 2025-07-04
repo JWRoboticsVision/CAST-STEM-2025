@@ -41,6 +41,7 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
           - [3.2.3 Install NIDS-Net](#323-install-nids-net)
         - [4.3 Download the Datasets](#43-download-the-datasets)
         - [4.4 Create a Symbolic Link for the Models](#44-create-a-symbolic-link-for-the-models)
+  - [Tabletop Objects used in the Project](#tabletop-objects-used-in-the-project)
   - [Example Usage](#example-usage)
       - [1. Run, Enter and Stop the Docker container:](#1-run-enter-and-stop-the-docker-container)
       - [2. Run the SAM2 Segmentation (Mannual Segmentation)](#2-run-the-sam2-segmentation-mannual-segmentation)
@@ -262,6 +263,12 @@ rm -rf models
 # Create a new symbolic link to the models directory in the datasets
 ln -s ~/code/datasets/models
 ```
+
+## Tabletop Objects used in the Project
+
+To make the grasping scene easier, we will use a subset of the YCB objects for the tabletop scene.
+
+![ycb_objects_vis](./docs/resources/ycb_objects_vis.jpg)
 
 ## Example Usage
 
