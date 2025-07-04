@@ -42,6 +42,7 @@ TABLE_HEIGHT = 0.78 + Z_OFFSET
 
 MODEL_NAMES = [
     "003_cracker_box",
+    "004_sugar_box",
     "005_tomato_soup_can",
     "006_mustard_bottle",
     "007_tuna_fish_can",
@@ -326,8 +327,7 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
             print(f"Failed to get pose for {obj_name}. Skipping...")
             continue
         p.pose = rt_to_ros_pose(p.pose, RT_obj)
-        obj_mesh_path = f"{models_dir}/{obj_name}/textured_simple.obj"
-        scene.add_mesh(obj_name, p, f"{obj_mesh_path}")
+        scene.add_mesh(obj_name, p, f"{models_dir}/{obj_name}/textured_simple.obj")
 
 
 def create_scene():
@@ -428,10 +428,6 @@ def do_motion_planning():
         # ------------------------ LIFTING OBJECT --------------------------#
         if gripper.is_fully_closed() or gripper.is_fully_open():
             print("Gripper fully open/closed (after Grasping)....Not Lifting!")
-            # TODO: LOG Grasping failure to log file with scene_id, object name, pose method, and order (all exp params)
-            rospy.loginfo(
-                f"Gripper fully open/closed (after Grasping) object_name--{obj_name} pose_method--{pose_method}"
-            )
         else:
             print("Trying to lift object")
             RT_gripper = get_gripper_rt(tf_buffer)

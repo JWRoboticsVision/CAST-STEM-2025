@@ -13,14 +13,13 @@ from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PoseStamped, Pose
 from gazebo_msgs.srv import GetModelState
 import moveit_commander
-import moveit_msgs.msg
+from moveit_msgs.msg import DisplayTrajectory
 import tf2_ros
 from tf.transformations import quaternion_matrix
 
 from fetch_grasp.grippers import FetchGripper
 from fetch_grasp.utils import PROJECT_ROOT, OBJECT_CLASSES
 from fetch_grasp.utils.commons import draw_image_overlay, extract_masks_from_labels, draw_annotated_image
-from fetch_grasp.utils.scene import ObjectService, SceneMaker
 from fetch_grasp.utils.control import PointHeadClient, FollowTrajectoryClient
 from fetch_grasp.utils.grasp import (
     parse_grasps,
@@ -41,43 +40,38 @@ TABLE_HEIGHT = 0.78 + Z_OFFSET
 
 MODEL_NAMES = [
     "003_cracker_box",
+    "004_sugar_box",
     "005_tomato_soup_can",
     "006_mustard_bottle",
     # "007_tuna_fish_can",
-    # "008_pudding_box",
-    "009_gelatin_box",
+    "008_pudding_box",
+    # "009_gelatin_box",
     # "010_potted_meat_can",
     "011_banana",
-    "021_bleach_cleanser",
+    # "021_bleach_cleanser",
     # "024_bowl",
     # "025_mug",
     "035_power_drill",
     # "037_scissors",
     # "040_large_marker",
-    "052_extra_large_clamp",
+    # "052_extra_large_clamp",
 ]
 
 
 def get_tf_pose(tf_buffer, target_frame, base_frame=None):
     try:
-        transform = tf_buffer.lookup_transform(
-            base_frame, target_frame, rospy.Time.now(), rospy.Duration(1.0)
-        ).transform
-        quat = [
-            transform.rotation.x,
-            transform.rotation.y,
-            transform.rotation.z,
-            transform.rotation.w,
-        ]
-        RT_obj = quaternion_matrix(quat)
-        RT_obj[:3, 3] = np.array([transform.translation.x, transform.translation.y, transform.translation.z])
+        transform = tf_buffer.lookup_transform(base_frame, target_frame, rospy.Time(0), rospy.Duration(1.0)).transform
+        q = transform.rotation
+        t = transform.translation
+        RT_obj = quaternion_matrix([q.x, q.y, q.z, q.w])
+        RT_obj[:3, 3] = [t.x, t.y, t.z]
+        return RT_obj
     except (
         tf2_ros.LookupException,
         tf2_ros.ConnectivityException,
         tf2_ros.ExtrapolationException,
     ):
-        RT_obj = None
-    return RT_obj
+        return None
 
 
 def plan_grasp(group, scene, RT_grasps_base, grasp_index, obj_name, RT_obj, fraction_thresh=0.9):
@@ -119,7 +113,7 @@ def plan_grasp(group, scene, RT_grasps_base, grasp_index, obj_name, RT_obj, frac
         if plan[0]:
             trajectory = plan[1]
             flag_plan = True
-            scene.remove_world_object(obj_name)
+            # scene.remove_world_object(obj_name)
             waypoints = []
             wpose = group.get_current_pose().pose
             for i in range(1, standoff_grasp_global.shape[0]):
@@ -252,7 +246,7 @@ def grasp_with_rt(gripper, group, scene, object_name, display_trajectory_publish
         return
 
     # visualize plan
-    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory = DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(trajectory)
     # Publish
@@ -279,7 +273,7 @@ def grasp_with_rt(gripper, group, scene, object_name, display_trajectory_publish
     trajectory = plan_standoff
 
     # visualize plan
-    display_trajectory = moveit_msgs.msg.DisplayTrajectory()
+    display_trajectory = DisplayTrajectory()
     display_trajectory.trajectory_start = robot.get_current_state()
     display_trajectory.trajectory.append(trajectory)
     # Publish
@@ -297,15 +291,7 @@ def grasp_with_rt(gripper, group, scene, object_name, display_trajectory_publish
 
 
 def get_gripper_rt(tf_buffer):
-    transform = tf_buffer.lookup_transform("base_link", "ati_link", rospy.Time.now(), rospy.Duration(1.0)).transform
-    quat = [
-        transform.rotation.x,
-        transform.rotation.y,
-        transform.rotation.z,
-        transform.rotation.w,
-    ]
-    RT_gripper = quaternion_matrix(quat)
-    RT_gripper[:3, 3] = np.array([transform.translation.x, transform.translation.y, transform.translation.z])
+    RT_gripper = get_tf_pose(tf_buffer, "ati_link", "base_link")
     return RT_gripper
 
 
@@ -336,43 +322,27 @@ def setup_planning_scene(scene, object_names, pose_method="gazebo", table_positi
     for obj_name in object_names:
         RT_obj = get_pose(obj_name, pose_method)
         p.pose = rt_to_ros_pose(p.pose, RT_obj)
-        obj_mesh_path = models_dir / obj_name / "textured_simple.obj"
-        scene.add_mesh(obj_name, p, f"{obj_mesh_path}")
-
-
-def create_scene():
-    rospy.loginfo("=" * 5 + " Creating scene in Gazebo... " + "=" * 5)
-    # ---------- Add objects to the scene ----------
-    sample_scene, _ = scene_m.create_scene()
-    object_names = sorted(sample_scene.keys())
-
-    cleanup_scene(object_names)
-
-    rospy.loginfo("Adding the cafe table...")
-    objs.add_object("cafe_table_org", [*table_position, 0, 0, 0, 1])
-
-    rospy.loginfo(f"Adding objects...")
-    for obj_name in object_names:
-        objs.add_object(obj_name, sample_scene[obj_name])
-    rospy.sleep(3.0)  # wait for objects to be added
-    print("Objects added to the scene!\n" + f"{object_names}")
-
-    return sample_scene, object_names
-
-
-def cleanup_scene(scene_objects):
-    rospy.loginfo("Cleaning up the scene...")
-    all_objects = scene_objects + ["cafe_table_org"]
-    for obj in all_objects:
-        try:
-            objs.delete_object(obj)
-        except Exception as e:
-            pass
+        scene.add_mesh(obj_name, p, f"{models_dir}/{obj_name}/textured_simple.obj")
 
 
 def do_motion_planning():
-    # ---------- Setup the planning scene ----------
+    # ---------- Find observed objects on the table ----------
+    while True:
+        rgb = get_image_by_topic(color_topic, message_type=Image)
+        if rgb is not None:
+            break
+    masks, obj_names, labels, labels_vis = run_nidsnet_once(nids_mod, rgb)
+    nids_vis_pub.publish(ros_numpy.msgify(Image, labels_vis, encoding="rgb8"))
 
+    object_names = [name for name in obj_names if name in MODEL_NAMES]
+
+    if len(object_names) == 0:
+        print(f"No Valid Objects found on Table!!!")
+        return
+
+    print(f"Observed Objects on Table: {object_names}")
+
+    # ---------- Setup the planning scene ----------
     target_object_names = [n for n in object_names]
     for obj_idx, obj_name in enumerate(object_names):
         print("=" * 5 + f" Start Motion Planning for {obj_name} " + "=" * 5)
@@ -392,7 +362,7 @@ def do_motion_planning():
             # Using Graspit generated grasp to test the Pose Detection (model based grasping)
 
             # Load grasps
-            grasp_file = grasp_dir / f"fetch_gripper-{obj_name}.json"
+            grasp_file = f"{grasp_dir}/fetch_gripper-{obj_name}.json"
             RT_grasps = parse_grasps(grasp_file)
 
             # Sort grasps according to distances to gripper
@@ -409,7 +379,7 @@ def do_motion_planning():
 
         if direct_topdown or (grasp_num == -1 or (not trajectory_standoff) or (not trajectory_final)):
             rospy.logwarn("No plans found for direct grasping, trying TOP-DOWN!")
-            mesh_p = models_dir / obj_name / "textured_simple.obj"
+            mesh_p = f"{models_dir}/{obj_name}/textured_simple.obj"
             obj_pts = get_object_verts(mesh_p, pose=RT_obj)
             RT_grasp, g_width = model_based_top_down_grasp(obj_pts)
             print(f"Gripper Width: {g_width}")
@@ -434,10 +404,6 @@ def do_motion_planning():
         # ------------------------ LIFTING OBJECT --------------------------#
         if gripper.is_fully_closed() or gripper.is_fully_open():
             print("Gripper fully open/closed (after Grasping)....Not Lifting!")
-            # TODO: LOG Grasping failure to log file with scene_id, object name, pose method, and order (all exp params)
-            rospy.loginfo(
-                f"Gripper fully open/closed (after Grasping) object_name--{obj_name} pose_method--{pose_method}"
-            )
         else:
             print("Trying to lift object")
             RT_gripper = get_gripper_rt(tf_buffer)
@@ -457,8 +423,6 @@ def do_motion_planning():
                 move_arm_to_dropoff(group, RT_gripper, x_final=0.78)
                 if gripper.is_fully_closed() or gripper.is_fully_open():
                     print("Gripper fully open/closed (after Moving)....")
-                    # TODO: LOG Moving failure to log file
-                    print("Gripper fully open/closed (after Moving).... ")
                 print(f"{obj_name} successfully droppedoff")
 
         # ------------------------ OPEN GRIPPER & STOW ---------------------#
@@ -466,10 +430,13 @@ def do_motion_planning():
         gripper.open()
         print("STOWING THE GRIPPER")
         reset_arm_stow(group)
+
         target_object_names.remove(obj_name)  # remove the object from the target list
-        input("proceed next ?")
-        input("proceed next ?")
-        input("proceed next ?")
+
+        for i in range(3):
+            x = input("proceed next object?").lower()
+            if x == "n":
+                break
 
     # Clear Planning Scene
     scene.clear()
@@ -560,9 +527,6 @@ if __name__ == "__main__":
     models_dir = PROJECT_ROOT / "datasets/models"
     grasp_dir = PROJECT_ROOT / "datasets/grasp_data/refined_grasps"
     stable_pose_file = PROJECT_ROOT / "datasets/pose_data/selected_poses.pk"
-    grid_r = 2
-    grid_c = 2
-    grid_size = (grid_r, grid_c)
     table_position = [0.8, 0, Z_OFFSET]
 
     # Define topics
@@ -574,18 +538,13 @@ if __name__ == "__main__":
     base_frame = "base_link"
     camera_frame = "head_camera_rgb_optical_frame"
 
-    # import pdb; pdb.set_trace()
-
     # ---------- Create a node ----------
     rospy.init_node("GazeboSceneGenerator")
     tf_buffer = tf2_ros.Buffer(rospy.Duration(100.0))  # tf buffer length
     tf_listener = tf2_ros.TransformListener(tf_buffer)
     nids_vis_pub = rospy.Publisher("/fdpose/nids_vis", Image, queue_size=1)
     pose_vis_pub = rospy.Publisher("/fdpose/pose_vis", Image, queue_size=1)
-
-    # ---------- Create services ----------
-    # objs = ObjectService(models_base_path=models_dir)
-    # scene_m = SceneMaker(MODEL_NAMES, models_dir, grid_size, table_position, TABLE_HEIGHT, stable_pose_file)
+    cam_K, im_height, im_width = get_camera_K(caminfo_topic)
 
     # ---------- initialize clients for Fetch robot ----------
     torso_action = FollowTrajectoryClient("torso_controller", ["torso_lift_joint"])
@@ -595,15 +554,11 @@ if __name__ == "__main__":
     moveit_commander.roscpp_initialize(sys.argv)
     group = moveit_commander.MoveGroupCommander("arm")
     group.set_max_velocity_scaling_factor(0.5)
-    group.set_end_effector_link("ati_link")  # set the end effector link
+    group.set_end_effector_link("ati_link")
     group_grp = moveit_commander.MoveGroupCommander("gripper")
     scene = moveit_commander.PlanningSceneInterface()
     robot = moveit_commander.RobotCommander()
-    display_trajectory_publisher = rospy.Publisher(
-        "/move_group/display_planned_path",
-        moveit_msgs.msg.DisplayTrajectory,
-        queue_size=20,
-    )
+    display_trajectory_publisher = rospy.Publisher("/move_group/display_planned_path", DisplayTrajectory, queue_size=20)
     gripper = FetchGripper(group_grp)
 
     # ---------- initialize FoundationPose and NIDS-Net ----------
@@ -611,7 +566,6 @@ if __name__ == "__main__":
         rospy.loginfo("Initializing FoundationPose and NIDS-Net...")
         nids_mod = initialize_nidsnet()
         estimator = initialize_fdpose()
-        cam_K, im_height, im_width = get_camera_K(caminfo_topic)
         # Preload object meshes
         object_meshes = {
             model_name: trimesh.load_mesh(f"{models_dir}/{model_name}/textured_simple.obj")
@@ -638,20 +592,16 @@ if __name__ == "__main__":
 
     while not rospy.is_shutdown():
         try:
-            while True:
-                rgb = get_image_by_topic(color_topic, message_type=Image)
-                if rgb is not None:
+            for i in range(3):
+                x = input("Ready for next Scene?").lower()
+                if x == "n":
+                    y = input("Exit the program?").lower()
+                    if y == "y":
+                        print("Exiting the program...")
+                        moveit_commander.roscpp_shutdown()
+                        rospy.signal_shutdown("User requested shutdown.")
+                        sys.exit(0)
                     break
-            masks, obj_names, labels, labels_vis = run_nidsnet_once(nids_mod, rgb)
-            nids_vis_pub.publish(ros_numpy.msgify(Image, labels_vis, encoding="rgb8"))
-
-            object_names = [name for name in obj_names if name in MODEL_NAMES]
-
-            if len(object_names) == 0:
-                rospy.loginfo(f"No Valid Objects found on Table!!!")
-                continue
-
-            rospy.loginfo(f"Observed Objects on Table: {object_names}")
 
             # Setup the planning scene
             do_motion_planning()
@@ -659,7 +609,7 @@ if __name__ == "__main__":
         except rospy.ROSInterruptException:
             print("ROS Interrupt Exception caught. Exiting...")
             break
+
         except Exception as e:
             print(f"An error occurred: {e}")
-            rospy.logerr(f"An error occurred: {e}")
             break
