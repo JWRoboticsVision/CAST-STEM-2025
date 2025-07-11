@@ -1,23 +1,28 @@
 # CAST-STEM 2025 Summer Camp Project
 
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg)](https://www.python.org/downloads/release/python-3110)
-[![ROS](https://img.shields.io/badge/ROS-Melodic-22314E.svg)](http://wiki.ros.org/melodic)
+[![ROS](https://img.shields.io/badge/ROS-Noetic-22314E.svg)](http://wiki.ros.org/Noetic)
 [![Pytorch](https://img.shields.io/badge/Pytorch-2.1.1-EE4C2C.svg)](https://pytorch.org/)
 [![Linux](https://img.shields.io/badge/OS-Ubuntu_20.04-FF9800.svg)](https://ubuntu.com/)
+![License](https://img.shields.io/badge/License-MIT-4E9A06.svg)
+[![Website](https://img.shields.io/badge/Website-Visit-lightgrey.svg)](<[TBD](https://6870362276c8fc9e2aeeb7c4--beamish-babka-095ba1.netlify.app/)>)
 
-<!-- ![License](https://img.shields.io/badge/License-GPLv3-4E9A06.svg) -->
-<!-- [![Website](https://img.shields.io/badge/Website-Visit-lightgrey.svg)](TBD) -->
+This is the repository for the CAST-STEM 2025 Summer Camp project. The project aims to study perception-driven robotic grasping, where a robot first needs to recognize objects and then plans its motion for grasping. Our website could be found at [CAST-STEM 2025](https://6870362276c8fc9e2aeeb7c4--beamish-babka-095ba1.netlify.app/).
 
-This is the repository for the CAST-STEM 2025 Summer Camp project. The project aims to study perception-driven robotic grasping, where a robot first needs to recognize objects and then plans its motion for grasping.
+---
+
+![Poster](./docs/resources/UTD-013_Poster.png)
 
 ---
 
 ## Main Referred Methods
 
 - **Object 6D Pose Estimation:** [FoundationPose](https://github.com/NVlabs/FoundationPose)
-- **Object Segmentation:** [NIDS-Net](https://github.com/IRVLUTD/NIDS-Net)
+- **Object Detection and Segmentation:** [NIDS-Net](https://github.com/IRVLUTD/NIDS-Net)
 - **Fetch Robot ROS Components for IRVL Lab:** [fetch_ros_IRVL](https://github.com/IRVLUTD/fetch_ros_IRVL)
 - **Sim & Real Grasping Scene Generation & Implementation:** [SceneReplica](https://github.com/IRVLUTD/SceneReplica)
+
+---
 
 ## Contents
 
@@ -41,7 +46,7 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
           - [3.2.3 Install NIDS-Net](#323-install-nids-net)
         - [4.3 Download the Datasets](#43-download-the-datasets)
         - [4.4 Create a Symbolic Link for the Models](#44-create-a-symbolic-link-for-the-models)
-  - [Tabletop Objects used in the Project](#tabletop-objects-used-in-the-project)
+  - [Objects used in the Project](#objects-used-in-the-project)
   - [Example Usage](#example-usage)
       - [1. Run, Enter and Stop the Docker container:](#1-run-enter-and-stop-the-docker-container)
       - [2. Run the SAM2 Segmentation (Mannual Segmentation)](#2-run-the-sam2-segmentation-mannual-segmentation)
@@ -50,7 +55,7 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [5. Run the FoundationPose on NIDS-Net Segmentation Results](#5-run-the-foundationpose-on-nids-net-segmentation-results)
       - [6. Run the Demos in Gazebo Simulation](#6-run-the-demos-in-gazebo-simulation)
         - [6.1 Prepare the Fetch Gazebo Simulation](#61-prepare-the-fetch-gazebo-simulation)
-        - [6.2 Terminal 5: Run the Fetch Grasping Simulation](#62-terminal-5-run-the-fetch-grasping-simulation)
+        - [6.2 Terminal 5: Run the Fetch Grasping Simulation with Groundtruth Poses](#62-terminal-5-run-the-fetch-grasping-simulation-with-groundtruth-poses)
         - [6.3 Terminal 5: Run the Fetch Grasping Simulation with NIDS-Net and FoundationPose](#63-terminal-5-run-the-fetch-grasping-simulation-with-nids-net-and-foundationpose)
         - [6.4 Terminal 5: Run the Image\_Listener](#64-terminal-5-run-the-image_listener)
   - [Project Schedule](#project-schedule)
@@ -71,11 +76,14 @@ This is the repository for the CAST-STEM 2025 Summer Camp project. The project a
       - [3. Run FoundationPose on the Saved RGBD Images](#3-run-foundationpose-on-the-saved-rgbd-images)
       - [4. NIDS-Net: Run Segmentation on the Published RGB Image](#4-nids-net-run-segmentation-on-the-published-rgb-image)
     - [Week 5: Run Grasping on Real Fetch Robot](#week-5-run-grasping-on-real-fetch-robot)
-      - [On Fetch Desktop](#on-fetch-desktop)
-        - [1.1 Make the Fetch Desktop ROS work as a ROS client](#11-make-the-fetch-desktop-ros-work-as-a-ros-client)
-        - [1.2 Adjust the Fetch Robot for Safe Grasping](#12-adjust-the-fetch-robot-for-safe-grasping)
-        - [1.4 Place the target objects (e.g., YCB Cracker) on the table.](#14-place-the-target-objects-eg-ycb-cracker-on-the-table)
-        - [1.3 Run the Grasping on the Real Fetch Robot](#13-run-the-grasping-on-the-real-fetch-robot)
+      - [1.1 Make the Fetch Desktop ROS work as a ROS client](#11-make-the-fetch-desktop-ros-work-as-a-ros-client)
+      - [1.2 Adjust the Fetch Robot for Safe Grasping](#12-adjust-the-fetch-robot-for-safe-grasping)
+      - [1.4 Place the target objects (e.g., YCB Cracker) on the table.](#14-place-the-target-objects-eg-ycb-cracker-on-the-table)
+      - [1.3 Run the Grasping on the Real Fetch Robot](#13-run-the-grasping-on-the-real-fetch-robot)
+      - [1.4 More Results of the Grasping in Real-World](#14-more-results-of-the-grasping-in-real-world)
+          - [1.4.1 Video Recording of the real grasping task](#141-video-recording-of-the-real-grasping-task)
+          - [1.4.2 Screen Recording of the real grasping task](#142-screen-recording-of-the-real-grasping-task)
+          - [1.4.3 Failure Case of the real grasping task](#143-failure-case-of-the-real-grasping-task)
 
 ## Prerequisites
 
@@ -264,11 +272,13 @@ rm -rf models
 ln -s ~/code/datasets/models
 ```
 
-## Tabletop Objects used in the Project
+## Objects used in the Project
 
-To make the grasping scene easier, we will use a subset of the YCB objects for the tabletop scene.
+To make the grasping scene easier, we will use a subset of the [YCB objects](https://www.ycbbenchmarks.com/object-models/) for the tabletop scene.
 
-![ycb_objects_vis](./docs/resources/ycb_objects_vis.jpg)
+| Object Models                                            | Grasping Data                                          |
+| -------------------------------------------------------- | ------------------------------------------------------ |
+| ![ycb_objects_vis](./docs/resources/ycb_objects_vis.jpg) | ![ycb_grasp_data](./docs/resources/ycb_grasp_data.png) |
 
 ## Example Usage
 
@@ -387,7 +397,7 @@ roslaunch ~/code/config/launch/moveit_sim.launch
 rviz -d ~/code/config/rviz/grasp_sim.rviz
 ```
 
-##### 6.2 Terminal 5: Run the Fetch Grasping Simulation
+##### 6.2 Terminal 5: Run the Fetch Grasping Simulation with Groundtruth Poses
 
 ```bash
 python ~/code/tools/fetch_grasp_sim.py --pose_method gazebo
@@ -462,8 +472,10 @@ python ~/code/tools/test_image_listenser.py
 #### 2. Further Readings
 
 - [FoundationPose: Unified 6D Pose Estimation and Tracking of Novel Objects](https://arxiv.org/abs/2312.08344)
-- [Segment Anything](https://arxiv.org/abs/2304.02643)
+- [SAM: Segment Anything](https://arxiv.org/abs/2304.02643)
 - [SAM 2: Segment Anything in Images and Videos](https://arxiv.org/pdf/2408.00714)
+- [NIDS-Net: Adapting Pre-Trained Vision Models for Novel Instance Detection and Segmentation](https://arxiv.org/abs/2405.17859)
+- [DINOv2: Learning Robust Visual Features without Supervision](https://arxiv.org/abs/2304.07193)
 
 #### 3. Useful Resources
 
@@ -664,7 +676,7 @@ rviz -d ~/code/config/rviz/grasp_sim.rviz
   Available scene ids: 10, 25, 27, 33, 36, 38, 39, 48, 56, 65, 68, 77, 83, 84, 104, 122, 130, 141, 148, 161
 
 ```bash
-cd ~/code/third-party/SceneReplica/src && python setup_scene_sim.py --data_dir ../Datasets/benchmarking
+cd ~/code/third-party/SceneReplica/src && python setup_scene_sim.py --data_dir ../../../datasets
 # Select the scene id you want to setup
 # For example, to setup scene id 10
 ```
@@ -676,7 +688,7 @@ cd ~/code/third-party/SceneReplica/src && python setup_scene_sim.py --data_dir .
 cd ~/code/third-party/SceneReplica/src && python bench_model_based_grasping.py \
   --pose_method gazebo \
   --obj_order nearest_first \
-  --data_dir ../Datasets/benchmarking \
+  --data_dir ../../../datasets \
   --scene_idx 10
 ```
 
@@ -722,13 +734,13 @@ Now, we have the inputs ready, we can run the FoundationPose to get the 6D poses
 
 First, follow steps in [Run the Fetch Grasping in Gazebo Simulation](#6-run-the-fetch-grasping-in-gazebo-simulation) to create the Gazebo simulation environment with the Fetch robot and the YCB Cracker object. No grasping is needed in this practice.
 
-Next, finish the code in [09_fdpose_and_nidsnet_sim.py](notebooks/09_fdpose_and_nidsnet_sim.py) with below tasks:
+**Next, finish the code** in [09_fdpose_and_nidsnet_sim.py](notebooks/09_fdpose_and_nidsnet_sim.py) with below tasks:
 
 - Subscribe the color image, depth image and camera info from the Fetch Gazebo simulation: refer to [08_FoundationPoseROS_answer.py](notebooks/08_FoundationPoseROS_answer.py) to get the color, depth images and camera info.
 - Run the NIDS-Net segmentation on the subscribed color image: refer to [tools/test_nidsnet.py](tools/test_nidsnet.py) to run the NIDS-Net segmentation on the color image.
 - Run the FoundationPose on the NIDS-Net segmentation results: refer to [tools/test_nidsnet_and_fdpose.py](tools/test_nidsnet_and_fdpose.py) to run the FoundationPose on the NIDS-Net segmentation results.
 - The estimated poses by FoundationPose should be close to the ground truth poses of the objects in the scene.
-- The answer could be found [here](notebooks/09_fdpose_and_nidsnet_sim_answer.py). (**Will be available this Friday**)
+- The answer could be found [here](notebooks/09_fdpose_and_nidsnet_sim_answer.py).
 
 The results will be saved under `/datasets/tmp/fdpose_nidsnet_sim`.
 
@@ -738,16 +750,7 @@ The results will be saved under `/datasets/tmp/fdpose_nidsnet_sim`.
 
 ### Week 5: Run Grasping on Real Fetch Robot
 
-<!-- #### 1. On Fetch Robot
-
-```bash
-source ~/Documents/IRVL_ws/devel/setup.bash
-roslaunch fetch_netft netft.launch
-``` -->
-
-#### On Fetch Desktop
-
-##### 1.1 Make the Fetch Desktop ROS work as a ROS client
+#### 1.1 Make the Fetch Desktop ROS work as a ROS client
 
 ```bash
 source ~/code/docker/source_env.sh
@@ -758,16 +761,18 @@ In our Lab ROS environment, the Fetch robot runs as the ROS master, and the desk
 The illustration of the ROS master and client relationship:
 ![here](https://i0.wp.com/circuitcellar.com/wp-content/uploads/2021/06/370_Torrico_Figure_3.jpg?w=653&ssl=1)
 
-##### 1.2 Adjust the Fetch Robot for Safe Grasping
+#### 1.2 Adjust the Fetch Robot for Safe Grasping
 
 - Move the Fetch robot to a safe position, such as front of the table.
 - Set the gripper to a proper position.
 - Lift the torso to a proper height.
 - Adjust the camera to look at the tabletop.
 
-##### 1.4 Place the target objects (e.g., YCB Cracker) on the table.
+#### 1.4 Place the target objects (e.g., YCB Cracker) on the table.
 
-##### 1.3 Run the Grasping on the Real Fetch Robot
+![grasp_real_demo_object](./docs/resources/grasp_real_demo_object.png)
+
+#### 1.3 Run the Grasping on the Real Fetch Robot
 
 - **Terminal 1:** Start the ROS master (if not already running)
 
@@ -802,3 +807,17 @@ The `fetch_grasp_real.py` script to execute the grasping. The script will execut
 - Once a `FULL grasp` is found, the Fetch robot will execute the planned grasping motion.
 
 ![grasp_real_demo](./docs/resources/grasp_real_demo_2x.gif)
+
+#### 1.4 More Results of the Grasping in Real-World
+
+###### 1.4.1 Video Recording of the real grasping task
+
+![real_grasp_record](./docs/resources/real_grasp_recording_16x.gif)
+
+###### 1.4.2 Screen Recording of the real grasping task
+
+![real_grasp_screen](./docs/resources/real_grasp_screen_16x.gif)
+
+###### 1.4.3 Failure Case of the real grasping task
+
+![real_grasp_failure](./docs/resources/real_grasp_failure.png)
