@@ -28,7 +28,7 @@ This is the repository for the [TAST-STEM](https://thetast.org/) 2025 Summer Cam
 
 ## Contents
 
-- [CAST-STEM 2025 Summer Camp Project](#cast-stem-2025-summer-camp-project)
+- [TAST-STEM 2025 Summer Camp Project](#tast-stem-2025-summer-camp-project)
   - [Main Referred Methods](#main-referred-methods)
   - [Contents](#contents)
   - [Prerequisites](#prerequisites)
