@@ -7,11 +7,13 @@
 ![License](https://img.shields.io/badge/License-MIT-4E9A06.svg)
 [![Website](https://img.shields.io/badge/Website-Visit-lightgrey.svg)](<[TBD](https://6870362276c8fc9e2aeeb7c4--beamish-babka-095ba1.netlify.app/)>)
 
-This is the repository for the CAST-STEM 2025 Summer Camp project. The project aims to study perception-driven robotic grasping, where a robot first needs to recognize objects and then plans its motion for grasping. Our website could be found at [CAST-STEM 2025](https://6870362276c8fc9e2aeeb7c4--beamish-babka-095ba1.netlify.app/).
+This is the repository for the TAST-STEM 2025 Summer Camp project. The project aims to study perception-driven robotic grasping, where a robot first needs to recognize objects and then plans its motion for grasping. Our website could be found at [CAST-STEM 2025](https://6870362276c8fc9e2aeeb7c4--beamish-babka-095ba1.netlify.app/).
 
 ---
 
 ![Poster](./docs/resources/UTD-013_Poster.png)
+
+[![Project Video](https://img.youtube.com/vi/jBX4foN34wg/0.jpg)](https://youtu.be/jBX4foN34wg)
 
 ---
 
